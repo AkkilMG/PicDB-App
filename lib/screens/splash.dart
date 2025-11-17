@@ -60,19 +60,32 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void initNotification() async {
-    String recentNotifyId = prefs.getString('recent_notify') ?? '';
+    if (prefs.get('recent_notify') == null) {
+      await prefs.setStringList('recent_notify', []);
+    }
+    if (prefs.get('recent_notify') is String) {
+      await prefs.setStringList('recent_notify', []);
+    }
+
+    List<String> recentNotifyId = prefs.getStringList('recent_notify') ?? [];
+    print('Recent Notify ID: $recentNotifyId');
+
     try {
       final notification = await APIService().fetchNotify();
       if (notification['success'] == true) {
         final notifications = notification['notifications'] as List;
         for (var notify in notifications) {
-          if (notify['_id'] != recentNotifyId) {
+          final id = notify['_id'] as String?;
+          if (id == null) continue;
+          if (!recentNotifyId.contains(id)) {
             await _notifyService.showNotification(
               title: notify['title'],
               body: notify['body'],
               id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
             );
-            await prefs.setString('recent_notify', notify['_id']);
+            print('Scheduled Notification: $id');
+            recentNotifyId.add(id);
+            await prefs.setStringList('recent_notify', recentNotifyId);
           }
         }
       }
