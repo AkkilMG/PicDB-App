@@ -1,8 +1,10 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+
+import '../../services/theme_notifier.dart';
 
 class UploadPopup extends StatefulWidget {
   final String imageUrl;
@@ -26,10 +28,27 @@ class _UploadPopupState extends State<UploadPopup> {
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
+
+    final backgroundColor = isDarkMode ? Colors.grey[850] : Colors.white;
+    final textColor = isDarkMode ? Colors.white : Colors.black;
+    final secondaryTextColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
+    final buttonPrimaryColor = isDarkMode ? Colors.blue[700] : Colors.blue;
+    final buttonSecondaryColor =
+        isDarkMode ? Colors.blue[900] : Colors.blue.shade200;
+    final containerBorderColor =
+        isDarkMode ? Colors.grey[700] : Colors.grey.shade400;
+    final iconContainerColor =
+        isDarkMode ? Colors.grey[700] : Colors.grey.shade300;
+    final iconColor = isDarkMode ? Colors.white : Colors.black;
+    final linkColor = isDarkMode ? Colors.lightBlueAccent : Colors.blue.shade800;
+
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
+      backgroundColor: backgroundColor,
       child: Container(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -76,7 +95,7 @@ class _UploadPopupState extends State<UploadPopup> {
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
-                  icon: const Icon(Icons.close),
+                  icon: Icon(Icons.close, color: textColor),
                 ),
               ],
             ),
@@ -86,9 +105,10 @@ class _UploadPopupState extends State<UploadPopup> {
             Text(
               // "Name: ${widget.imageName}",
               "Name: ${widget.imageName.length > 18 ? '${widget.imageName.substring(0, 20)}...' : widget.imageName}",
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
+                color: textColor,
               ),
             ),
 
@@ -106,7 +126,7 @@ class _UploadPopupState extends State<UploadPopup> {
                       });
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                      backgroundColor: buttonPrimaryColor,
                       padding: const EdgeInsets.symmetric(vertical: 15),
                     ),
                     child: const Text("Download"),
@@ -121,7 +141,7 @@ class _UploadPopupState extends State<UploadPopup> {
                       });
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade200,
+                      backgroundColor: buttonSecondaryColor,
                       padding: const EdgeInsets.symmetric(vertical: 15),
                     ),
                     child: const Text("View"),
@@ -134,34 +154,60 @@ class _UploadPopupState extends State<UploadPopup> {
 
             // Conditional Content (Download or View)
             _showDownloadContent
-                ? _buildDownloadContent(context)
-                : _buildViewContent(context),
+                ? _buildDownloadContent(context,
+                    textColor: textColor,
+                    secondaryTextColor: secondaryTextColor ?? Colors.grey,
+                    containerBorderColor: containerBorderColor ?? Colors.grey,
+                    iconContainerColor: iconContainerColor ?? Colors.grey,
+                    iconColor: iconColor,
+                    linkColor: linkColor,
+                    isDarkMode: isDarkMode)
+                : _buildViewContent(context,
+                    textColor: textColor,
+                    secondaryTextColor: secondaryTextColor ?? Colors.grey,
+                    containerBorderColor: containerBorderColor ?? Colors.grey,
+                    iconContainerColor: iconContainerColor ?? Colors.grey,
+                    iconColor: iconColor,
+                    linkColor: linkColor),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDownloadContent(BuildContext context) {
+  Widget _buildDownloadContent(
+    BuildContext context, {
+    required Color textColor,
+    required Color secondaryTextColor,
+    required Color containerBorderColor,
+    required Color iconContainerColor,
+    required Color iconColor,
+    required Color linkColor,
+    required bool isDarkMode,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           "Image Download:",
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
+            color: textColor,
           ),
         ),
         const SizedBox(height: 8),
-        const Text("This provides you a link to download the image."),
+        Text(
+          "This provides you a link to download the image.",
+          style: TextStyle(color: secondaryTextColor),
+        ),
         const SizedBox(height: 16),
-        const Text("Download link"),
+        Text("Download link", style: TextStyle(color: textColor)),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade400),
+            border: Border.all(color: containerBorderColor),
             borderRadius: BorderRadius.circular(5),
           ),
           child: Row(
@@ -169,7 +215,7 @@ class _UploadPopupState extends State<UploadPopup> {
               Expanded(
                 child: Text(
                   widget.imageUrl,
-                  style: TextStyle(color: Colors.blue.shade800),
+                  style: TextStyle(color: linkColor),
                   overflow: TextOverflow.ellipsis, // Hide overflow with ellipsis
                   maxLines: 1, // Allow only one line
                 ),
@@ -184,10 +230,10 @@ class _UploadPopupState extends State<UploadPopup> {
                 child: Container(
                   padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: iconContainerColor,
                     borderRadius: BorderRadius.circular(5),
                   ),
-                  child: const Icon(Icons.copy, size: 20),
+                  child: Icon(Icons.copy, size: 20, color: iconColor),
                 ),
               ),
               const SizedBox(width: 5),
@@ -200,10 +246,10 @@ class _UploadPopupState extends State<UploadPopup> {
                 child: Container(
                   padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: iconContainerColor,
                     borderRadius: BorderRadius.circular(5),
                   ),
-                  child: const Icon(Icons.open_in_new, size: 20),
+                  child: Icon(Icons.open_in_new, size: 20, color: iconColor),
                 ),
               ),
             ],
@@ -215,29 +261,45 @@ class _UploadPopupState extends State<UploadPopup> {
             data: widget.imageUrl,
             version: QrVersions.auto,
             size: 200.0,
+            backgroundColor: isDarkMode ? Colors.white : Colors.transparent,
           ),
         ),
         const SizedBox(height: 8),
-        const Center(
-          child: Text("Scan this code to download the image."),
+        Center(
+          child: Text(
+            "Scan this code to download the image.",
+            style: TextStyle(color: secondaryTextColor),
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildViewContent(BuildContext context) {
+  Widget _buildViewContent(
+    BuildContext context, {
+    required Color textColor,
+    required Color secondaryTextColor,
+    required Color containerBorderColor,
+    required Color iconContainerColor,
+    required Color iconColor,
+    required Color linkColor,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           "Image View:",
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
+            color: textColor,
           ),
         ),
         const SizedBox(height: 8),
-        const Text("This provides you a link to view the image."),
+        Text(
+          "This provides you a link to view the image.",
+          style: TextStyle(color: secondaryTextColor),
+        ),
         const SizedBox(height: 20),
         Center(
           child: SizedBox(
@@ -247,20 +309,23 @@ class _UploadPopupState extends State<UploadPopup> {
               widget.viewUrl,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
-                return const Center(
-                  child: Text("Image failed to load"),
+                return Center(
+                  child: Text(
+                    "Image failed to load",
+                    style: TextStyle(color: secondaryTextColor),
+                  ),
                 );
               },
             ),
           ),
         ),
         const SizedBox(height: 20),
-        const Text("View link"),
+        Text("View link", style: TextStyle(color: textColor)),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade400),
+            border: Border.all(color: containerBorderColor),
             borderRadius: BorderRadius.circular(5),
           ),
           child: Row(
@@ -268,7 +333,7 @@ class _UploadPopupState extends State<UploadPopup> {
               Expanded(
                 child: Text(
                   widget.viewUrl,
-                  style: TextStyle(color: Colors.blue.shade800),
+                  style: TextStyle(color: linkColor),
                   overflow: TextOverflow.ellipsis, // Hide the overflow
                   maxLines: 1, // Only allow one line
                 ),
@@ -283,10 +348,10 @@ class _UploadPopupState extends State<UploadPopup> {
                 child: Container(
                   padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: iconContainerColor,
                     borderRadius: BorderRadius.circular(5),
                   ),
-                  child: const Icon(Icons.copy, size: 20),
+                  child: Icon(Icons.copy, size: 20, color: iconColor),
                 ),
               ),
               const SizedBox(width: 5),
@@ -299,10 +364,10 @@ class _UploadPopupState extends State<UploadPopup> {
                 child: Container(
                   padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: iconContainerColor,
                     borderRadius: BorderRadius.circular(5),
                   ),
-                  child: const Icon(Icons.open_in_new, size: 20),
+                  child: Icon(Icons.open_in_new, size: 20, color: iconColor),
                 ),
               ),
             ],

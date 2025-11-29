@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:uuid/uuid.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,7 +9,7 @@ class APIService {
   static const String _baseUrlGroup = 'https://picdb.arkynox.com';
 
   Future<Map<dynamic, dynamic>> fetchNotify() async {
-    var response = await http.get(Uri.parse('$_baseUrlGroup/api/notification'));
+    var response = await http.get(Uri.parse('$_baseUrlGroup/api/mobile/notification'));
     if (response.statusCode == 200) {
       var data = json.decode(response.body);
       if (data['success'] == true) {
@@ -60,6 +59,76 @@ class APIService {
       return {
         'success': false,
         'message': 'Failed to upload file: Server error ${response.statusCode}'
+      };
+    }
+  }
+
+
+  // testimonial-related APIs
+  static Future<Map<String, dynamic>> saveTestimonial({
+    required String logo,
+    String? logoColor,
+    required String rating,
+    required String quote,
+    required String name,
+    required String location,
+    String? company,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrlGroup/api/mobile/testimonials'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'logo': logo,
+          'logoColor': logoColor != null? logoColor : "text-blue-600",
+          'rating': rating,
+          'quote': quote,
+          'name': name,
+          'location': location,
+          'company': company,
+        }),
+      );
+
+      // Log response status + body for debugging
+      print('saveTestimonial response: ${res.statusCode}');
+      print('saveTestimonial body: "${res.body}"');
+
+      // Handle empty body
+      if (res.body.trim().isEmpty) {
+        // If server returned HTTP 2xx with empty body, treat as success (fallback)
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          return {
+            'success': true,
+            'message': 'Submitted (empty response from server)',
+            'statusCode': res.statusCode,
+          };
+        }
+        return {
+          'success': false,
+          'message': 'Empty response from server',
+          'statusCode': res.statusCode,
+        };
+      }
+
+      // Try to parse JSON safely
+      try {
+        final decoded = jsonDecode(res.body);
+        // If server returned non-JSON like plain text, jsonDecode will throw and be caught
+        return decoded is Map ? Map<String, dynamic>.from(decoded) : {'success': true, 'data': decoded};
+      } catch (e) {
+        print('Failed to parse JSON in saveTestimonial: $e');
+        return {
+          'success': false,
+          'message': 'Invalid JSON response from server',
+          'statusCode': res.statusCode,
+          'raw': res.body,
+        };
+      }
+    } catch (e) {
+      print('Error saving testimonial: $e');
+      return {
+        'success': false,
+        'message': 'Error saving testimonial',
       };
     }
   }
@@ -212,7 +281,7 @@ class APIService {
   static Future<Map<String, dynamic>> setUsernameAPI(String username) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrlGroup/api/auth/user'),
+        Uri.parse('$_baseUrlGroup/api/mobile/auth/user'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'name': username}),
       ).timeout(

@@ -39,7 +39,6 @@ class NotifyService {
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) async {
         // Handle notification tap
-        print('Notification clicked: ${response.payload}');
       },
     );
 
@@ -93,9 +92,9 @@ class NotifyService {
         largeIcon: DrawableResourceAndroidBitmap('@mipmap/launcher_icon'),
         styleInformation: BigTextStyleInformation(
           '',
-          htmlFormatBigText: true,
-          htmlFormatContent: true,
-          htmlFormatTitle: true,
+          htmlFormatBigText: false,
+          htmlFormatContent: false,
+          htmlFormatTitle: false,
         ),
         fullScreenIntent: true,
         channelShowBadge: true,

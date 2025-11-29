@@ -4,17 +4,44 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 /// A class that provides consistent styling for dialogs throughout the app
 class AppDialogTheme {
+  final bool isDarkMode;
+
   // Constants for dialog styling
   static const double borderRadius = 16.0;
   static const EdgeInsets contentPadding = EdgeInsets.fromLTRB(24, 20, 24, 24);
   static const EdgeInsets actionsPadding = EdgeInsets.fromLTRB(24, 0, 24, 16);
 
-  // Color scheme matching the group list header
-  static const Color primaryDark = Color(0xFF0D1F2D);
-  static const Color blueAccent = Color(0xFF2196F3);
-  static const Color greenAccent = Color(0xFF4CAF50);
-  static const Color backgroundColor = Color(0xFFFCF9F5);
-  static const Color surfaceColor = Colors.white;
+  // Light Theme Colors
+  static const Color _primaryDarkLight = Color(0xFF0D1F2D);
+  static const Color _blueAccentLight = Color(0xFF2196F3);
+  static const Color _greenAccentLight = Color(0xFF4CAF50);
+  static const Color _backgroundColorLight = Color(0xFFFCF9F5);
+  static const Color _surfaceColorLight = Colors.white;
+  static const Color _textColorLight = _primaryDarkLight;
+  static const Color _secondaryTextColorLight = Color(0xFF6c757d);
+  static const Color _iconBackgroundColorLight = Color(0xFFf1f3f5);
+
+  // Dark Theme Colors
+  static const Color _primaryDarkDark = Color(0xFFFFFFFF);
+  static const Color _blueAccentDark = Color(0xFF64b5f6);
+  static const Color _greenAccentDark = Color(0xFF81c784);
+  static const Color _backgroundColorDark = Color(0xFF121212);
+  static const Color _surfaceColorDark = Color(0xFF1E1E1E);
+  static const Color _textColorDark = Colors.white;
+  static const Color _secondaryTextColorDark = Color(0xFFadb5bd);
+  static const Color _iconBackgroundColorDark = Color(0xFF343a40);
+
+  AppDialogTheme({required this.isDarkMode});
+
+  // Theme-dependent colors
+  Color get primaryColor => isDarkMode ? _primaryDarkDark : _primaryDarkLight;
+  Color get blueAccent => isDarkMode ? _blueAccentDark : _blueAccentLight;
+  Color get greenAccent => isDarkMode ? _greenAccentDark : _greenAccentLight;
+  Color get backgroundColor => isDarkMode ? _backgroundColorDark : _backgroundColorLight;
+  Color get surfaceColor => isDarkMode ? _surfaceColorDark : _surfaceColorLight;
+  Color get textColor => isDarkMode ? _textColorDark : _textColorLight;
+  Color get secondaryTextColor => isDarkMode ? _secondaryTextColorDark : _secondaryTextColorLight;
+  Color get iconBackgroundColor => isDarkMode ? _iconBackgroundColorDark : _iconBackgroundColorLight;
 
   // Animated dialog builder with enhanced animations
   static Widget animatedDialogBuilder(BuildContext context, Widget? child) {
@@ -39,18 +66,18 @@ class AppDialogTheme {
   }
 
   // Enhanced dialog decoration with gradient and modern styling
-  static BoxDecoration get dialogDecoration => BoxDecoration(
+  BoxDecoration get dialogDecoration => BoxDecoration(
         color: surfaceColor,
         borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
           BoxShadow(
-            color: primaryDark.withOpacity(0.08),
+            color: (isDarkMode ? Colors.black : _primaryDarkLight).withOpacity(0.08),
             blurRadius: 32,
             offset: const Offset(0, 16),
             spreadRadius: 0,
           ),
           BoxShadow(
-            color: primaryDark.withOpacity(0.04),
+            color: (isDarkMode ? Colors.black : _primaryDarkLight).withOpacity(0.04),
             blurRadius: 8,
             offset: const Offset(0, 4),
             spreadRadius: 0,
@@ -59,7 +86,7 @@ class AppDialogTheme {
       );
 
   // Header decoration with gradient
-  static BoxDecoration getHeaderDecoration(Color accentColor) => BoxDecoration(
+  BoxDecoration getHeaderDecoration(Color accentColor) => BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -83,43 +110,43 @@ class AppDialogTheme {
       );
 
   // Text styles with improved typography
-  static TextStyle get headerTitleStyle => const TextStyle(
+  TextStyle get headerTitleStyle => const TextStyle(
         fontSize: 24,
         fontWeight: FontWeight.bold,
         color: Colors.white,
         letterSpacing: 0.5,
       );
 
-  static TextStyle get titleStyle => const TextStyle(
+  TextStyle get titleStyle => TextStyle(
         fontSize: 22,
         fontWeight: FontWeight.w700,
-        color: primaryDark,
+        color: primaryColor,
         letterSpacing: 0.3,
       );
 
-  static TextStyle get contentStyle => TextStyle(
+  TextStyle get contentStyle => TextStyle(
         fontSize: 16,
-        color: primaryDark.withOpacity(0.7),
+        color: primaryColor.withOpacity(0.7),
         height: 1.4,
         letterSpacing: 0.1,
       );
 
-  static TextStyle get labelStyle => TextStyle(
+  TextStyle get labelStyle => TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w600,
-        color: primaryDark.withOpacity(0.8),
+        color: primaryColor.withOpacity(0.8),
         letterSpacing: 0.2,
       );
 
   // Enhanced button styles
-  static ButtonStyle getCancelButtonStyle() => TextButton.styleFrom(
-        foregroundColor: primaryDark.withOpacity(0.7),
+  ButtonStyle getCancelButtonStyle() => TextButton.styleFrom(
+        foregroundColor: primaryColor.withOpacity(0.7),
         minimumSize: const Size(120, 48),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
           side: BorderSide(
-            color: primaryDark.withOpacity(0.2),
+            color: primaryColor.withOpacity(0.2),
             width: 1.5,
           ),
         ),
@@ -130,7 +157,7 @@ class AppDialogTheme {
         ),
       );
   
-  static ButtonStyle getConfirmButtonStyle(Color backgroundColor) => FilledButton.styleFrom(
+  ButtonStyle getConfirmButtonStyle(Color backgroundColor) => FilledButton.styleFrom(
         foregroundColor: Colors.white,
         backgroundColor: backgroundColor,
         minimumSize: const Size(120, 48),
@@ -148,11 +175,12 @@ class AppDialogTheme {
       );
   
   // Enhanced input decoration with modern styling
-  static InputDecoration getInputDecoration(String label, {IconData? prefixIcon, Color accentColor = blueAccent}) {
+  InputDecoration getInputDecoration(String label, {IconData? prefixIcon, Color? accentColor}) {
+    final effectiveAccentColor = accentColor ?? blueAccent;
     return InputDecoration(
       labelText: label,
       labelStyle: TextStyle(
-        color: primaryDark.withOpacity(0.6),
+        color: primaryColor.withOpacity(0.6),
         fontSize: 14,
         fontWeight: FontWeight.w500,
       ),
@@ -162,7 +190,7 @@ class AppDialogTheme {
             child: Icon(
               prefixIcon,
               size: 22,
-              color: accentColor.withOpacity(0.7),
+              color: effectiveAccentColor.withOpacity(0.7),
             ),
           )
         : null,
@@ -170,21 +198,21 @@ class AppDialogTheme {
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(
-          color: primaryDark.withOpacity(0.2),
+          color: primaryColor.withOpacity(0.2),
           width: 1.5,
         ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(
-          color: primaryDark.withOpacity(0.15),
+          color: primaryColor.withOpacity(0.15),
           width: 1.5,
         ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(
-          color: accentColor,
+          color: effectiveAccentColor,
           width: 2.5,
         ),
       ),
@@ -205,14 +233,14 @@ class AppDialogTheme {
       filled: true,
       fillColor: backgroundColor.withOpacity(0.3),
       hintStyle: TextStyle(
-        color: primaryDark.withOpacity(0.4),
+        color: primaryColor.withOpacity(0.4),
         fontSize: 14,
       ),
     );
   }
 
   // Utility method for creating feature cards
-  static Widget buildFeatureCard({
+  Widget buildFeatureCard({
     required IconData icon,
     required String title,
     required String description,
@@ -252,7 +280,7 @@ class AppDialogTheme {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: primaryDark,
+                    color: textColor,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -260,7 +288,7 @@ class AppDialogTheme {
                   description,
                   style: TextStyle(
                     fontSize: 14,
-                    color: primaryDark.withOpacity(0.6),
+                    color: textColor.withOpacity(0.6),
                   ),
                 ),
               ],

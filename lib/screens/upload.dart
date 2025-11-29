@@ -12,6 +12,8 @@ import '../services/api_service.dart';
 import 'package:flutter/material.dart'; // Add missing Flutter import
 import 'package:permission_handler/permission_handler.dart'; // Add missing permission handler import
 import 'package:flutter_animate/flutter_animate.dart'; // Add missing animate import
+import 'package:picdb/services/theme_notifier.dart';
+import 'package:provider/provider.dart';
 
 // Import widgets
 import '../widgets/bottom_nav.dart';
@@ -41,6 +43,21 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
   String _currentFileName = '';
   List<XFile> _pendingUploads = [];
   bool _isCancelled = false;
+  ThemeMode _themeMode = ThemeMode.system;
+
+  @override
+  void initState() {
+    super.initState();
+    initPrefs();
+    loadingController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..addListener(() {
+      setState(() {});
+    });
+    initPrefs();
+    Future.delayed(const Duration(seconds: 2), initImages);
+  }
 
   Future<bool> _requestPermissions(ImageSource source) async {
     if (Platform.isAndroid) {
@@ -274,14 +291,21 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
   }
 
   void _showImageSourceDialog() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    bool isDarkMode;
+    if (themeNotifier.themeMode == ThemeMode.system) {
+      isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
+    } else {
+      isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
+    }
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
         return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          decoration: BoxDecoration(
+            color: isDarkMode ? const Color(0xFF1C2A3A) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: SafeArea(
             child: Column(
@@ -302,7 +326,7 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade800,
+                    color: isDarkMode ? Colors.white : Colors.grey.shade800,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -341,6 +365,13 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
     required String label,
     required VoidCallback onTap,
   }) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    bool isDarkMode;
+    if (themeNotifier.themeMode == ThemeMode.system) {
+      isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
+    } else {
+      isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
+    }
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -349,17 +380,17 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: isDarkMode ? Colors.blue.shade900.withOpacity(0.6) : Colors.blue.shade50,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 32, color: Colors.blue.shade700),
+            child: Icon(icon, size: 32, color: isDarkMode ? Colors.blue.shade300 : Colors.blue.shade700),
           ),
           const SizedBox(height: 8),
           Text(
             label,
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey.shade800,
+              color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade800,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -549,15 +580,22 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
   }
 
   Widget _buildUploadProgress() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    bool isDarkMode;
+    if (themeNotifier.themeMode == ThemeMode.system) {
+      isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
+    } else {
+      isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
+    }
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDarkMode ? const Color(0xFF1C2A3A) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade200,
+            color: isDarkMode ? Colors.black.withOpacity(0.2) : Colors.grey.shade200,
             offset: const Offset(0, 2),
             blurRadius: 6,
           )
@@ -571,12 +609,12 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade100,
+                  color: isDarkMode ? Colors.blue.shade900.withOpacity(0.6) : Colors.blue.shade100,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Icons.cloud_upload,
-                  color: Colors.blue.shade700,
+                  color: isDarkMode ? Colors.blue.shade300 : Colors.blue.shade700,
                   size: 20,
                 ),
               ),
@@ -592,7 +630,7 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade800,
+                            color: isDarkMode ? Colors.white : Colors.grey.shade800,
                           ),
                         ),
                         if (_pendingUploads.length > 1)
@@ -601,7 +639,7 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                               ' (${_pendingUploads.length} remaining)',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey.shade600,
+                                color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -613,7 +651,7 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                       _currentFileName,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.grey.shade600,
+                        color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -636,7 +674,7 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Colors.blue.shade700,
+                    color: isDarkMode ? Colors.blue.shade300 : Colors.blue.shade700,
                   ),
                   textAlign: TextAlign.end,
                 ),
@@ -648,9 +686,9 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: _uploadProgress,
-              backgroundColor: Colors.blue.shade50,
+              backgroundColor: isDarkMode ? Colors.blue.shade900.withOpacity(0.4) : Colors.blue.shade50,
               valueColor: AlwaysStoppedAnimation<Color>(
-                Colors.blue.shade400,
+                isDarkMode ? Colors.blue.shade600 : Colors.blue.shade400,
               ),
               minHeight: 4,
             ),
@@ -662,6 +700,13 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    bool isDarkMode;
+    if (themeNotifier.themeMode == ThemeMode.system) {
+      isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
+    } else {
+      isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
+    }
     return ConnectivityWidget(
       child: Scaffold(
         bottomNavigationBar: const BottomNavBar(selectedIndex: 0),
@@ -670,7 +715,9 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Colors.blue.shade50, Colors.white],
+              colors: isDarkMode
+                  ? [const Color(0xFF0D1A26), const Color(0xFF1A2B3D)]
+                  : [Colors.blue.shade50, Colors.white],
             ),
           ),
           child: SafeArea(
@@ -687,7 +734,7 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                             'Upload Image',
                             style: TextStyle(
                               fontSize: 32,
-                              color: Colors.grey.shade800,
+                              color: isDarkMode ? Colors.white : Colors.grey.shade800,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -698,7 +745,7 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                             'Share your moments with the world',
                             style: TextStyle(
                               fontSize: 16,
-                              color: Colors.grey.shade600,
+                              color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                             ),
                           ),
                           delay: 200,
@@ -718,12 +765,12 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                           radius: const Radius.circular(20),
                           dashPattern: const [10, 4],
                           strokeCap: StrokeCap.round,
-                          color: Colors.blue.shade400,
+                          color: isDarkMode ? Colors.blue.shade300 : Colors.blue.shade400,
                           child: Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(32),
                             decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
+                              color: isDarkMode ? Colors.blue.shade900.withOpacity(0.4) : Colors.blue.shade50,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Column(
@@ -739,7 +786,7 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                                   'Tap to upload images',
                                   style: TextStyle(
                                     fontSize: 18,
-                                    color: Colors.grey.shade700,
+                                    color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -748,7 +795,7 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                                   'Select multiple images • Max: 65MB each',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.grey.shade500,
+                                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
                                   ),
                                 ),
                               ],
@@ -780,16 +827,16 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: Colors.grey.shade800,
+                              color: isDarkMode ? Colors.white : Colors.grey.shade800,
                             ),
                           ),
                           TextButton.icon(
                             onPressed: _showImageSourceDialog,
-                            icon: Icon(Icons.add, color: Colors.blue.shade700),
+                            icon: Icon(Icons.add, color: isDarkMode ? Colors.blue.shade300 : Colors.blue.shade700),
                             label: Text(
                               'Upload More',
                               style: TextStyle(
-                                color: Colors.blue.shade700,
+                                color: isDarkMode ? Colors.blue.shade300 : Colors.blue.shade700,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -812,10 +859,10 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                               margin: const EdgeInsets.only(bottom: 16),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(16),
-                                color: Colors.white,
+                                color: isDarkMode ? const Color(0xFF1C2A3A) : Colors.white,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.grey.shade200,
+                                    color: isDarkMode ? Colors.black.withOpacity(0.2) : Colors.grey.shade200,
                                     offset: const Offset(0, 4),
                                     blurRadius: 8,
                                   )
@@ -838,7 +885,7 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                                           loadingBuilder: (context, child, loadingProgress) {
                                             if (loadingProgress == null) return child;
                                             return Container(
-                                              color: Colors.grey.shade100,
+                                              color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100,
                                               child: Center(
                                                 child: CircularProgressIndicator(
                                                   value: loadingProgress.expectedTotalBytes != null
@@ -846,7 +893,7 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                                                           loadingProgress.expectedTotalBytes!
                                                       : null,
                                                   valueColor: AlwaysStoppedAnimation<Color>(
-                                                    Colors.blue.shade200,
+                                                    isDarkMode ? Colors.blue.shade700 : Colors.blue.shade200,
                                                   ),
                                                 ),
                                               ),
@@ -866,9 +913,10 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                                             children: [
                                               Text(
                                                 result['title'],
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 16,
                                                   fontWeight: FontWeight.w600,
+                                                  color: isDarkMode ? Colors.white : Colors.black,
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
@@ -879,7 +927,7 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                                                   Icon(
                                                     Icons.link,
                                                     size: 14,
-                                                    color: Colors.grey.shade600,
+                                                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                                                   ),
                                                   const SizedBox(width: 4),
                                                   Expanded(
@@ -887,7 +935,7 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                                                       result['view'],
                                                       style: TextStyle(
                                                         fontSize: 14,
-                                                        color: Colors.grey.shade600,
+                                                        color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                                                       ),
                                                       maxLines: 1,
                                                       overflow: TextOverflow.ellipsis,
@@ -899,7 +947,7 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                                           ),
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.share),
+                                          icon: Icon(Icons.share, color: isDarkMode ? Colors.white : Colors.black),
                                           onPressed: () {
                                             // Implement share functionality
                                           },
@@ -927,18 +975,18 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
     );
   }
 
-  @override
-  void initState() {
-    super.initState();
-    loadingController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 10),
-    )..addListener(() {
-        setState(() {});
-      });
-    initPrefs();
-    Future.delayed(const Duration(seconds: 2), initImages);
-  }
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   loadingController = AnimationController(
+  //     vsync: this,
+  //     duration: const Duration(seconds: 10),
+  //   )..addListener(() {
+  //       setState(() {});
+  //     });
+  //   initPrefs();
+  //   Future.delayed(const Duration(seconds: 2), initImages);
+  // }
 
   @override
   void dispose() {

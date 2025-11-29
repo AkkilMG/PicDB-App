@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../screens/dashboard.dart';
 import '../screens/group_list_screen.dart';
 import '../screens/upload.dart';
+import '../screens/other_screen.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int selectedIndex;
@@ -41,15 +42,12 @@ class BottomNavBar extends StatelessWidget {
             activeColor: Colors.white,
             tabBackgroundColor: Colors.grey.shade800,
             gap: 8,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             duration: const Duration(milliseconds: 400), // Smooth transition duration
             curve: Curves.easeInOut, // Smooth animation curve
             selectedIndex: selectedIndex,
             onTabChange: (index) async {
-              if (index == 3) {
-                // Support tab
-                await _launchUrl('https://desk.arkynox.com/');
-              } else if (index != selectedIndex) {
+              if (index != selectedIndex) {
                 Navigator.of(context).pushReplacement(
                   PageRouteBuilder(
                     pageBuilder: (context, animation, secondaryAnimation) {
@@ -92,8 +90,8 @@ class BottomNavBar extends StatelessWidget {
                 ),
               ),
               GButton(
-                icon: Icons.support_agent,
-                text: 'Support',
+                icon: Icons.settings_outlined,
+                text: 'Other',
                 iconSize: 24,
                 textStyle: TextStyle(
                   fontWeight: FontWeight.w500,
@@ -115,6 +113,8 @@ class BottomNavBar extends StatelessWidget {
         return const DashboardScreen();
       case 2:
         return const GroupListScreen();
+      case 3:
+        return const OtherScreen();
       default:
         return const UploadImage();
     }

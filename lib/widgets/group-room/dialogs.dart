@@ -2,7 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
 
+import '../../services/theme_notifier.dart';
 import '../common/dialog_theme.dart';
 
 class CreateGroupResult {
@@ -28,6 +30,10 @@ Future<CreateGroupResult?> showCreateGroupDialog(BuildContext context) async {
     barrierDismissible: true,
     barrierColor: Colors.black54,
     builder: (BuildContext context) {
+      final themeNotifier = Provider.of<ThemeNotifier>(context);
+      final isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
+      final dialogTheme = AppDialogTheme(isDarkMode: isDarkMode);
+
       return AppDialogTheme.animatedDialogBuilder(
         context,
         Dialog(
@@ -37,7 +43,7 @@ Future<CreateGroupResult?> showCreateGroupDialog(BuildContext context) async {
           child: Container(
             width: double.infinity,
             constraints: const BoxConstraints(maxWidth: 400, maxHeight: 600),
-            decoration: AppDialogTheme.dialogDecoration,
+            decoration: dialogTheme.dialogDecoration,
             child: StatefulBuilder(
               builder: (context, setState) {
                 return SingleChildScrollView(
@@ -49,17 +55,17 @@ Future<CreateGroupResult?> showCreateGroupDialog(BuildContext context) async {
                         padding: const EdgeInsets.only(left: 24, right: 8, top: 16, bottom: 8),
                         child: Row(
                           children: [
-                            Icon(Icons.group_add, color: const Color(0xFF0D1F2D), size: 24),
+                            Icon(Icons.group_add, color: dialogTheme.primaryColor, size: 24),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: Text('Create Group', style: AppDialogTheme.titleStyle),
+                              child: Text('Create Group', style: dialogTheme.titleStyle),
                             ),
                             IconButton(
                               onPressed: () => Navigator.pop(context),
                               icon: const Icon(Icons.close, size: 24),
                               style: IconButton.styleFrom(
-                                foregroundColor: Colors.grey[600],
-                                backgroundColor: Colors.grey[100],
+                                foregroundColor: dialogTheme.secondaryTextColor,
+                                backgroundColor: dialogTheme.iconBackgroundColor,
                                 padding: const EdgeInsets.all(8),
                                 minimumSize: const Size(32, 32),
                               ),
@@ -80,7 +86,8 @@ Future<CreateGroupResult?> showCreateGroupDialog(BuildContext context) async {
                             children: [
                               TextFormField(
                                 controller: nameCtrl,
-                                decoration: AppDialogTheme.getInputDecoration(
+                                style: TextStyle(color: dialogTheme.textColor),
+                                decoration: dialogTheme.getInputDecoration(
                                   'Group name',
                                   prefixIcon: Icons.label
                                 ),
@@ -95,14 +102,15 @@ Future<CreateGroupResult?> showCreateGroupDialog(BuildContext context) async {
                               TextFormField(
                                 controller: passCtrl,
                                 obscureText: obscurePassword,
-                                decoration: AppDialogTheme.getInputDecoration(
+                                style: TextStyle(color: dialogTheme.textColor),
+                                decoration: dialogTheme.getInputDecoration(
                                   'Password',
                                   prefixIcon: Icons.lock
                                 ).copyWith(
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       obscurePassword ? Icons.visibility : Icons.visibility_off,
-                                      color: Colors.grey,
+                                      color: dialogTheme.secondaryTextColor,
                                     ),
                                     onPressed: () => setState(() => obscurePassword = !obscurePassword),
                                   ),
@@ -118,7 +126,7 @@ Future<CreateGroupResult?> showCreateGroupDialog(BuildContext context) async {
                               SizedBox(
                                 width: double.infinity,
                                 child: FilledButton(
-                                  style: AppDialogTheme.getConfirmButtonStyle(Colors.blue),
+                                  style: dialogTheme.getConfirmButtonStyle(Colors.blue),
                                   onPressed: () {
                                     if (formKey.currentState!.validate()) {
                                       Navigator.pop(
@@ -163,6 +171,10 @@ Future<JoinGroupResult?> showJoinGroupDialog(BuildContext context) async {
     barrierDismissible: true,
     barrierColor: Colors.black54,
     builder: (BuildContext context) {
+      final themeNotifier = Provider.of<ThemeNotifier>(context);
+      final isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
+      final dialogTheme = AppDialogTheme(isDarkMode: isDarkMode);
+
       return AppDialogTheme.animatedDialogBuilder(
         context,
         Dialog(
@@ -172,7 +184,7 @@ Future<JoinGroupResult?> showJoinGroupDialog(BuildContext context) async {
           child: Container(
             width: double.infinity,
             constraints: const BoxConstraints(maxWidth: 400, maxHeight: 600),
-            decoration: AppDialogTheme.dialogDecoration,
+            decoration: dialogTheme.dialogDecoration,
             child: StatefulBuilder(
               builder: (context, setState) {
                 return SingleChildScrollView(
@@ -184,17 +196,17 @@ Future<JoinGroupResult?> showJoinGroupDialog(BuildContext context) async {
                         padding: const EdgeInsets.only(left: 24, right: 8, top: 16, bottom: 8),
                         child: Row(
                           children: [
-                            Icon(Icons.group, color: const Color(0xFF0D1F2D), size: 24),
+                            Icon(Icons.group, color: dialogTheme.primaryColor, size: 24),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: Text('Join Group', style: AppDialogTheme.titleStyle),
+                              child: Text('Join Group', style: dialogTheme.titleStyle),
                             ),
                             IconButton(
                               onPressed: () => Navigator.pop(context),
                               icon: const Icon(Icons.close, size: 24),
                               style: IconButton.styleFrom(
-                                foregroundColor: Colors.grey[600],
-                                backgroundColor: Colors.grey[100],
+                                foregroundColor: dialogTheme.secondaryTextColor,
+                                backgroundColor: dialogTheme.iconBackgroundColor,
                                 padding: const EdgeInsets.all(8),
                                 minimumSize: const Size(32, 32),
                               ),
@@ -219,14 +231,14 @@ Future<JoinGroupResult?> showJoinGroupDialog(BuildContext context) async {
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
-                                  color: Colors.grey[700],
+                                  color: dialogTheme.secondaryTextColor,
                                 ),
                               ),
                               const SizedBox(height: 8),
 
                               // 6-Character OTP Style Input with underlines
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: List.generate(6, (index) {
@@ -236,24 +248,25 @@ Future<JoinGroupResult?> showJoinGroupDialog(BuildContext context) async {
                                         controller: codeControllers[index],
                                         focusNode: codeFocusNodes[index],
                                         textAlign: TextAlign.center,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 24,
                                           fontWeight: FontWeight.bold,
                                           letterSpacing: 0.5,
+                                          color: dialogTheme.textColor,
                                         ),
                                         inputFormatters: [
                                           LengthLimitingTextInputFormatter(1),
                                           FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
                                         ],
-                                        decoration: const InputDecoration(
+                                        decoration: InputDecoration(
                                           counterText: '',
                                           border: UnderlineInputBorder(
-                                            borderSide: BorderSide(color: Colors.grey, width: 1),
+                                            borderSide: BorderSide(color: dialogTheme.secondaryTextColor, width: 1),
                                           ),
                                           enabledBorder: UnderlineInputBorder(
-                                            borderSide: BorderSide(color: Colors.grey, width: 1),
+                                            borderSide: BorderSide(color: dialogTheme.secondaryTextColor, width: 1),
                                           ),
-                                          focusedBorder: UnderlineInputBorder(
+                                          focusedBorder: const UnderlineInputBorder(
                                             borderSide: BorderSide(color: Colors.blue, width: 1),
                                           ),
                                           contentPadding: EdgeInsets.only(bottom: 8),
@@ -288,7 +301,8 @@ Future<JoinGroupResult?> showJoinGroupDialog(BuildContext context) async {
                               TextFormField(
                                 controller: passCtrl,
                                 obscureText: obscurePassword,
-                                decoration: AppDialogTheme.getInputDecoration(
+                                style: TextStyle(color: dialogTheme.textColor),
+                                decoration: dialogTheme.getInputDecoration(
                                   'Password',
                                   prefixIcon: Icons.lock_rounded,
                                   accentColor: Colors.blue,
@@ -299,7 +313,7 @@ Future<JoinGroupResult?> showJoinGroupDialog(BuildContext context) async {
                                       icon: Container(
                                         padding: const EdgeInsets.all(4),
                                         decoration: BoxDecoration(
-                                          color: Colors.blue.withValues(alpha: 0.1),
+                                          color: Colors.blue.withAlpha(isDarkMode ? 40 : 25),
                                           borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: Icon(
@@ -323,7 +337,7 @@ Future<JoinGroupResult?> showJoinGroupDialog(BuildContext context) async {
                               SizedBox(
                                 width: double.infinity,
                                 child: FilledButton(
-                                  style: AppDialogTheme.getConfirmButtonStyle(Colors.blue),
+                                  style: dialogTheme.getConfirmButtonStyle(Colors.blue),
                                   onPressed: () {
                                     String code = codeControllers.map((c) => c.text).join();
                                     if (code.length == 6 && passCtrl.text.isNotEmpty) {

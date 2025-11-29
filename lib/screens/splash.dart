@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
 import '../services/notify_service.dart';
+import '../services/theme_notifier.dart';
 import '../widgets/check_connection.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -16,6 +18,7 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   late SharedPreferences prefs;
   late bool accepted;
+  late bool onboardingCompleted;
   late List<String> images;
   final NotifyService _notifyService = NotifyService();
 
@@ -29,7 +32,11 @@ class _SplashScreenState extends State<SplashScreen> {
       initNotification();
     });
     Future.delayed(const Duration(seconds: 8), () {
-      if (accepted) {
+      // Re-read prefs to ensure latest values
+      onboardingCompleted = prefs.getBool('onboarding_completed') ?? false;
+      accepted = prefs.getBool('accepted') ?? false;
+
+      if (onboardingCompleted || accepted) {
         Navigator.pushReplacementNamed(context, '/upload');
       } else {
         Navigator.pushReplacementNamed(context, '/onboarding');
@@ -43,7 +50,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void initAccepted() async {
     accepted = prefs.getBool("accepted") ?? false;
-    if (!accepted) {
+    // Ensure onboarding_completed is set when policies already accepted
+    if (accepted) {
+      await prefs.setBool('onboarding_completed', true);
+    } else {
+      // ensure key exists
       await prefs.setBool("accepted", false);
     }
   }
@@ -57,6 +68,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void initPrefs() async {
     prefs = await SharedPreferences.getInstance();
+    // Initialize onboardingCompleted flag
+    onboardingCompleted = prefs.getBool('onboarding_completed') ?? false;
   }
 
   void initNotification() async {
@@ -68,7 +81,6 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     List<String> recentNotifyId = prefs.getStringList('recent_notify') ?? [];
-    print('Recent Notify ID: $recentNotifyId');
 
     try {
       final notification = await APIService().fetchNotify();
@@ -83,7 +95,6 @@ class _SplashScreenState extends State<SplashScreen> {
               body: notify['body'],
               id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
             );
-            print('Scheduled Notification: $id');
             recentNotifyId.add(id);
             await prefs.setStringList('recent_notify', recentNotifyId);
           }
@@ -96,9 +107,17 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    bool isDarkMode;
+    if (themeNotifier.themeMode == ThemeMode.system) {
+      isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
+    } else {
+      isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
+    }
+
     return ConnectivityWidget(
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: isDarkMode ? Colors.grey[850] : Colors.white,
         body: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Center(
@@ -106,21 +125,21 @@ class _SplashScreenState extends State<SplashScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset("assets/logo/app_icon.png"),
-                const Text(
+                Text(
                   "PicDB",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 50,
-                    color: Colors.black,
+                    color: isDarkMode ? Colors.white : Colors.black,
                     fontFamily: 'Vonique',
                   ),
                 ),
-                const Text(
+                Text(
                   "Made with ❤️ by Arkynox",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.black,
+                    color: isDarkMode ? Colors.white : Colors.black,
                     fontFamily: 'Vonique',
                   ),
                 ),

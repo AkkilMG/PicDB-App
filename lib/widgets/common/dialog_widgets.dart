@@ -1,6 +1,8 @@
 // lib/widgets/common/dialog_widgets.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
+import '../../services/theme_notifier.dart';
 import 'dialog_theme.dart';
 
 /// A collection of reusable dialog widgets for the app
@@ -20,6 +22,10 @@ class AppDialogs {
       barrierDismissible: true,
       barrierColor: Colors.black54,
       builder: (BuildContext context) {
+        final themeNotifier = Provider.of<ThemeNotifier>(context);
+        final isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
+        final dialogTheme = AppDialogTheme(isDarkMode: isDarkMode);
+
         return AppDialogTheme.animatedDialogBuilder(
           context,
           Dialog(
@@ -31,7 +37,7 @@ class AppDialogs {
             child: Container(
               width: double.infinity,
               constraints: const BoxConstraints(maxWidth: 400),
-              decoration: AppDialogTheme.dialogDecoration,
+              decoration: dialogTheme.dialogDecoration,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -48,7 +54,7 @@ class AppDialogs {
                         Expanded(
                           child: Text(
                             title,
-                            style: AppDialogTheme.titleStyle.copyWith(
+                            style: dialogTheme.titleStyle.copyWith(
                               color: destructive ? Colors.red : null,
                             ),
                           ),
@@ -61,7 +67,7 @@ class AppDialogs {
                     padding: AppDialogTheme.contentPadding,
                     child: Text(
                       content,
-                      style: AppDialogTheme.contentStyle,
+                      style: dialogTheme.contentStyle,
                     ),
                   ),
                   Padding(
@@ -70,7 +76,7 @@ class AppDialogs {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         TextButton(
-                          style: AppDialogTheme.getCancelButtonStyle(),
+                          style: dialogTheme.getCancelButtonStyle(),
                           onPressed: () => Navigator.pop(context, false),
                           child: Text(cancelText),
                         ),
@@ -85,7 +91,7 @@ class AppDialogs {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                 )
-                              : AppDialogTheme.getConfirmButtonStyle(Colors.blue),
+                              : dialogTheme.getConfirmButtonStyle(Colors.blue),
                           onPressed: () => Navigator.pop(context, true),
                           child: Text(confirmText),
                         ),
@@ -116,6 +122,10 @@ class AppDialogs {
       barrierDismissible: true,
       barrierColor: Colors.black54,
       builder: (BuildContext context) {
+        final themeNotifier = Provider.of<ThemeNotifier>(context);
+        final isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
+        final dialogTheme = AppDialogTheme(isDarkMode: isDarkMode);
+
         return AppDialogTheme.animatedDialogBuilder(
           context,
           Dialog(
@@ -127,7 +137,7 @@ class AppDialogs {
             child: Container(
               width: double.infinity,
               constraints: const BoxConstraints(maxWidth: 400),
-              decoration: AppDialogTheme.dialogDecoration,
+              decoration: dialogTheme.dialogDecoration,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -144,7 +154,7 @@ class AppDialogs {
                         Expanded(
                           child: Text(
                             title,
-                            style: AppDialogTheme.titleStyle.copyWith(
+                            style: dialogTheme.titleStyle.copyWith(
                               color: isError ? Colors.red : null,
                             ),
                           ),
@@ -157,7 +167,7 @@ class AppDialogs {
                     padding: AppDialogTheme.contentPadding,
                     child: Text(
                       content,
-                      style: AppDialogTheme.contentStyle,
+                      style: dialogTheme.contentStyle,
                     ),
                   ),
                   Padding(
@@ -166,7 +176,7 @@ class AppDialogs {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         FilledButton(
-                          style: AppDialogTheme.getConfirmButtonStyle(Colors.blue),
+                          style: dialogTheme.getConfirmButtonStyle(Colors.blue),
                           onPressed: () => Navigator.pop(context),
                           child: Text(buttonText),
                         ),
@@ -193,6 +203,10 @@ class AppDialogs {
       barrierDismissible: false,
       barrierColor: Colors.black54,
       builder: (BuildContext context) {
+        final themeNotifier = Provider.of<ThemeNotifier>(context);
+        final isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
+        final dialogTheme = AppDialogTheme(isDarkMode: isDarkMode);
+
         return AppDialogTheme.animatedDialogBuilder(
           context,
           Dialog(
@@ -204,7 +218,7 @@ class AppDialogs {
             child: Container(
               width: double.infinity,
               constraints: const BoxConstraints(maxWidth: 400),
-              decoration: AppDialogTheme.dialogDecoration,
+              decoration: dialogTheme.dialogDecoration,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -221,7 +235,7 @@ class AppDialogs {
                         Expanded(
                           child: Text(
                             'Permission Required',
-                            style: AppDialogTheme.titleStyle,
+                            style: dialogTheme.titleStyle,
                           ),
                         ),
                       ],
@@ -235,7 +249,7 @@ class AppDialogs {
                       children: [
                         Text(
                           content,
-                          style: AppDialogTheme.contentStyle,
+                          style: dialogTheme.contentStyle,
                         ),
                         const SizedBox(height: 16),
                         Container(
@@ -267,13 +281,13 @@ class AppDialogs {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         TextButton(
-                          style: AppDialogTheme.getCancelButtonStyle(),
+                          style: dialogTheme.getCancelButtonStyle(),
                           onPressed: () => Navigator.pop(context, false),
                           child: const Text('Cancel'),
                         ),
                         const SizedBox(width: 8),
                         FilledButton(
-                          style: AppDialogTheme.getConfirmButtonStyle(Colors.blue),
+                          style: dialogTheme.getConfirmButtonStyle(Colors.blue),
                           onPressed: () {
                             Navigator.pop(context, true);
                             onOpenSettings();

@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../services/theme_notifier.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/check_connection.dart';
 import '../widgets/upload/UploadPopup.dart';
@@ -150,19 +152,29 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
   }
 
   void deleteImage(String title) async {
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    final isDarkMode = themeNotifier.themeMode == ThemeMode.dark ||
+        (themeNotifier.themeMode == ThemeMode.system &&
+            MediaQuery.of(context).platformBrightness == Brightness.dark);
+
     bool? shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Confirmation'),
+        backgroundColor: isDarkMode ? const Color(0xFF1A2B3D) : Colors.white,
+        title: Text(
+          'Delete Confirmation',
+          style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
+        ),
         content: Text(
           'Are you sure you want to delete "$title"?',
+          style: TextStyle(color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text(
+            child: Text(
               'Cancel',
-              style: TextStyle(color: Color(0xFF0D1F2D)),
+              style: TextStyle(color: isDarkMode ? Colors.blue.shade300 : const Color(0xFF0D1F2D)),
             ),
           ),
           TextButton(
@@ -205,13 +217,13 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
     }
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(String title, String value, IconData icon, Color color, bool isDarkMode) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: isDarkMode ? color.withOpacity(0.2) : color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withOpacity(isDarkMode ? 0.4 : 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,7 +235,7 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
               Text(
                 title,
                 style: TextStyle(
-                  color: color,
+                  color: isDarkMode ? color.withOpacity(0.9) : color,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -233,7 +245,7 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
           Text(
             value,
             style: TextStyle(
-              color: color,
+              color: isDarkMode ? color : color.withOpacity(0.9),
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
@@ -243,18 +255,18 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(bool isDarkMode) {
     return Hero(
       tag: 'searchBar',
       child: Material(
         color: Colors.transparent,
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDarkMode ? const Color(0xFF1A2B3D) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: isDarkMode ? Colors.black.withOpacity(0.2) : Colors.black.withOpacity(0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -263,26 +275,26 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
           child: TextField(
             controller: _searchController,
             onChanged: filterImages,
-            style: const TextStyle(
-              color: Color(0xFF0D1F2D),
+            style: TextStyle(
+              color: isDarkMode ? Colors.white : const Color(0xFF0D1F2D),
               fontSize: 16,
             ),
             decoration: InputDecoration(
               hintText: 'Search by name or file type...',
               hintStyle: TextStyle(
-                color: Colors.grey.shade400,
+                color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade400,
                 fontSize: 16,
               ),
-              prefixIcon: const Icon(
+              prefixIcon: Icon(
                 Icons.search_rounded,
-                color: Color(0xFF0D1F2D),
+                color: isDarkMode ? Colors.grey.shade400 : const Color(0xFF0D1F2D),
                 size: 24,
               ),
               suffixIcon: _searchController.text.isNotEmpty
                 ? IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.close_rounded,
-                      color: Color(0xFF0D1F2D),
+                      color: isDarkMode ? Colors.grey.shade400 : const Color(0xFF0D1F2D),
                     ),
                     onPressed: () {
                       setState(() {
@@ -296,7 +308,7 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
               ),
-              fillColor: const Color(0xFFFAFAFA),
+              fillColor: isDarkMode ? const Color(0xFF1A2B3D) : const Color(0xFFFAFAFA),
               filled: true,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
@@ -309,7 +321,7 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildStatCards() {
+  Widget _buildStatCards(bool isDarkMode) {
     if (isLoading) return const SizedBox.shrink();
 
     return Row(
@@ -319,7 +331,8 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
             'Total Images',
             images.length.toString(),
             Icons.image_rounded,
-            const Color(0xFF4CAF50),
+            isDarkMode ? Colors.green.shade300 : const Color(0xFF4CAF50),
+            isDarkMode,
           ).animate()
             .fadeIn(duration: const Duration(milliseconds: 600))
             .slideX(begin: -0.2, end: 0),
@@ -335,7 +348,8 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
               ),
             ).toString()),
             Icons.storage_rounded,
-            const Color(0xFF2196F3),
+            isDarkMode ? Colors.blue.shade300 : const Color(0xFF2196F3),
+            isDarkMode,
           ).animate()
             .fadeIn(duration: const Duration(milliseconds: 600))
             .slideX(begin: 0.2, end: 0),
@@ -344,14 +358,14 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isDarkMode) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDarkMode ? const Color(0xFF0D1A26) : Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: isDarkMode ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.05),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -368,20 +382,20 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
                 children: [
                   Text(
                     _greeting(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
-                      color: Color(0xFF666666),
+                      color: isDarkMode ? Colors.grey.shade400 : const Color(0xFF666666),
                     ),
                   ).animate()
                     .fadeIn(duration: const Duration(milliseconds: 500))
                     .slideX(begin: -0.2, end: 0),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'My Gallery',
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF0D1F2D),
+                      color: isDarkMode ? Colors.white : const Color(0xFF0D1F2D),
                     ),
                   ).animate()
                     .fadeIn(duration: const Duration(milliseconds: 500))
@@ -393,11 +407,11 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF2196F3).withOpacity(0.1),
+                      color: isDarkMode ? Colors.blue.withOpacity(0.2) : const Color(0xFF2196F3).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF0D1F2D).withOpacity(0.1),
+                          color: isDarkMode ? Colors.black.withOpacity(0.2) : const Color(0xFF0D1F2D).withOpacity(0.1),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -405,9 +419,9 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
                     ),
                     child: GestureDetector(
                       onTap: refreshImages,
-                      child: const Icon(
+                      child: Icon(
                         Icons.refresh_rounded,
-                        color: Color(0xFF2196F3),
+                        color: isDarkMode ? Colors.blue.shade300 : const Color(0xFF2196F3),
                         size: 24,
                       ),
                     ),
@@ -418,19 +432,19 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDFF2B8),
+                      color: isDarkMode ? Colors.teal.withOpacity(0.2) : const Color(0xFFDFF2B8),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF0D1F2D).withOpacity(0.1),
+                          color: isDarkMode ? Colors.black.withOpacity(0.2) : const Color(0xFF0D1F2D).withOpacity(0.1),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
                       ],
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.photo_library_rounded,
-                      color: Color(0xFF0D1F2D),
+                      color: isDarkMode ? Colors.teal.shade200 : const Color(0xFF0D1F2D),
                       size: 24,
                     ),
                   ).animate()
@@ -442,9 +456,9 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
           ),
           if (!isLoading) ...[
             const SizedBox(height: 20),
-            _buildStatCards(),
+            _buildStatCards(isDarkMode),
             const SizedBox(height: 16),
-            _buildSearchBar().animate()
+            _buildSearchBar(isDarkMode).animate()
               .fadeIn(duration: const Duration(milliseconds: 500))
               .slideY(begin: -0.2, end: 0),
           ],
@@ -455,14 +469,19 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDarkMode = themeNotifier.themeMode == ThemeMode.dark ||
+        (themeNotifier.themeMode == ThemeMode.system &&
+            MediaQuery.of(context).platformBrightness == Brightness.dark);
+
     return ConnectivityWidget(
       child: Scaffold(
-        backgroundColor: const Color(0xFFFCF9F5),
+        backgroundColor: isDarkMode ? const Color(0xFF0D1A26) : const Color(0xFFFCF9F5),
         bottomNavigationBar: const BottomNavBar(selectedIndex: 1,),
         body: SafeArea(
           child: Column(
             children: [
-              _buildHeader(),
+              _buildHeader(isDarkMode),
               Expanded(
                 child: Stack(
                   children: [
@@ -477,11 +496,11 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
                               fit: BoxFit.fill,
                             ),
                             const SizedBox(height: 16),
-                            const Text(
+                            Text(
                               'Loading your gallery...',
                               style: TextStyle(
                                 fontSize: 16,
-                                color: Color(0xFF0D1F2D),
+                                color: isDarkMode ? Colors.white70 : const Color(0xFF0D1F2D),
                               ),
                             ),
                           ],
@@ -502,10 +521,10 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
                               _searchController.text.isEmpty
                                   ? 'No images uploaded yet'
                                   : 'No images found for "${_searchController.text}"',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF0D1F2D),
+                                color: isDarkMode ? Colors.white : const Color(0xFF0D1F2D),
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -521,7 +540,7 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
                                 icon: const Icon(Icons.refresh_rounded),
                                 label: const Text('Clear search'),
                                 style: TextButton.styleFrom(
-                                  foregroundColor: const Color(0xFF2196F3),
+                                  foregroundColor: isDarkMode ? Colors.blue.shade300 : const Color(0xFF2196F3),
                                 ),
                               ),
                             ],
@@ -548,12 +567,13 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
                                       size: image['size'],
                                       view: image['view'],
                                       link: image['link'],
+                                      isDarkMode: isDarkMode,
                                     ),
                                   ),
                                 ),
                               ),
                             );
-                          },
+                            },
                         ),
                       ),
                   ],
@@ -570,7 +590,8 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
     required String title,
     required String size,
     required String view,
-    required String link
+    required String link,
+    required bool isDarkMode,
   }) {
     final fileType = title.split('.').last.toUpperCase();
     final formattedSize = _formatFileSize(size);
@@ -582,11 +603,11 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFEEEEEE)),
+          color: isDarkMode ? const Color(0xFF1A2B3D) : Colors.white,
+          border: Border.all(color: isDarkMode ? Colors.grey.withOpacity(0.2) : const Color(0xFFEEEEEE)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: isDarkMode ? Colors.black.withOpacity(0.2) : Colors.black.withOpacity(0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -605,14 +626,14 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
                       width: 54,
                       height: 54,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0D1F2D).withOpacity(0.05),
+                        color: isDarkMode ? Colors.grey.withOpacity(0.1) : const Color(0xFF0D1F2D).withOpacity(0.05),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Center(
                         child: Text(
                           fileType[0],
-                          style: const TextStyle(
-                            color: Color(0xFF0D1F2D),
+                          style: TextStyle(
+                            color: isDarkMode ? Colors.white : const Color(0xFF0D1F2D),
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                           ),
@@ -632,13 +653,13 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF2D1A9),
+                                  color: isDarkMode ? Colors.teal.withOpacity(0.3) : const Color(0xFFF2D1A9),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
                                   fileType,
-                                  style: const TextStyle(
-                                    color: Color(0xFF0D1F2D),
+                                  style: TextStyle(
+                                    color: isDarkMode ? Colors.teal.shade200 : const Color(0xFF0D1F2D),
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
                                   ),
@@ -660,8 +681,8 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
                           const SizedBox(height: 8),
                           Text(
                             title,
-                            style: const TextStyle(
-                              color: Color(0xFF0D1F2D),
+                            style: TextStyle(
+                              color: isDarkMode ? Colors.white : const Color(0xFF0D1F2D),
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
                             ),
@@ -673,28 +694,28 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
                             children: [
                               Icon(
                                 Icons.folder_outlined,
-                                color: Colors.grey.shade600,
+                                color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                                 size: 14,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 formattedSize,
                                 style: TextStyle(
-                                  color: Colors.grey.shade600,
+                                  color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                                   fontSize: 12,
                                 ),
                               ),
                               const SizedBox(width: 12),
                               Icon(
                                 Icons.calendar_today_outlined,
-                                color: Colors.grey.shade600,
+                                color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                                 size: 14,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 formattedDate,
                                 style: TextStyle(
-                                  color: Colors.grey.shade600,
+                                  color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                                   fontSize: 12,
                                 ),
                               ),
@@ -712,12 +733,11 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
                 right: 0,
                 child: Container(
                   height: 3,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [
-                        Color(0xFFF2D1A9),
-                        Color(0xFFDFF2B8),
-                      ],
+                      colors: isDarkMode
+                          ? [Colors.teal.shade300, Colors.blue.shade300]
+                          : [const Color(0xFFF2D1A9), const Color(0xFFDFF2B8)],
                     ),
                   ),
                 ),

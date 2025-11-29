@@ -24,7 +24,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   bool _isUsernameValid = false;
   bool _isSubmitting = false;
   String? _usernameError;
-  final APIService _apiService = APIService();
   bool _hasUsername = false;
 
   final List<Map<String, String>> onboardingData = [
@@ -48,6 +47,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _initPrefs() async {
     prefs = await SharedPreferences.getInstance();
+
+    // If onboarding already completed, skip directly to upload
+    final bool onboardingCompleted = prefs.getBool('onboarding_completed') ?? false;
+    final bool acceptedPref = prefs.getBool('accepted') ?? false;
+
+    if (onboardingCompleted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacementNamed(context, '/upload');
+      });
+      return;
+    }
+
+    // If policies were already accepted previously, mark onboarding completed and go to upload
+    if (acceptedPref) {
+      await prefs.setBool('onboarding_completed', true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacementNamed(context, '/upload');
+      });
+      return;
+    }
 
     // Check if username and uid already exist in SharedPreferences
     final String? username = prefs.getString('username');
@@ -75,6 +94,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (_currentPage == onboardingData.length + 1) {
       if (termsAccepted && privacyAccepted) {
         await prefs.setBool("accepted", true);
+        // mark onboarding completed when policies accepted
+        await prefs.setBool('onboarding_completed', true);
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/upload');
         }
@@ -243,7 +264,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             children: [
               Lottie.asset(
                 "assets/lottie/policy.json",
-                height: 300,
+                height: 250,
               ),
               ]
           ),
@@ -251,7 +272,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             'Please review and accept our policies to continue:',
             style: TextStyle(fontSize: 16),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Card(
             elevation: 2,
             child: Column(
@@ -262,7 +283,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         const Text(
                           'I accept the ',
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: 14,
                           ),),
                         GestureDetector(
                           onTap: () => _launchURL('https://picdb.arkynox.com/policy/mobile/terms-of-service'),
@@ -270,7 +291,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             'Terms of Service',
                             style: TextStyle(
                               color: Colors.blue,
-                              fontSize: 15,
+                              fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -291,7 +312,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         const Text(
                           'I accept the ',
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: 14,
                           ),
                         ),
                         GestureDetector(
@@ -300,7 +321,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             'Privacy Policy',
                             style: TextStyle(
                               color: Colors.blue,
-                              fontSize: 15,
+                              fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -331,6 +352,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            // Top bar with Skip button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                children: [
+                  const Spacer(),
+                  // Show Skip only when not on the policy (final) page
+                  if (_currentPage < onboardingData.length + 1)
+                    TextButton(
+                      onPressed: () {
+                        // Jump directly to policy page; policy cannot be skipped
+                        _pageController.animateToPage(
+                          onboardingData.length + 1,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeIn,
+                        );
+                      },
+                      child: const Text('Skip'),
+                    ),
+                ],
+              ),
+            ),
             Expanded(
               child: PageView(
                 controller: _pageController,
