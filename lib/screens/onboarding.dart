@@ -349,6 +349,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final totalPages = onboardingData.length + 2;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: Column(
           children: [

@@ -11,6 +11,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import '../services/theme_notifier.dart';
+import 'package:flutter/services.dart';
 
 class GroupListScreen extends StatefulWidget {
   const GroupListScreen({super.key});
@@ -41,6 +42,9 @@ class _GroupListScreenState extends State<GroupListScreen> with TickerProviderSt
 
   // Only allow search and manual refresh when we have both uid and username
   bool get _canUseSearchAndRefresh => uid.isNotEmpty && username.isNotEmpty;
+
+  // Keep the form key stable to prevent focus loss while typing
+  final GlobalKey<FormState> _usernameFormKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -94,92 +98,203 @@ class _GroupListScreenState extends State<GroupListScreen> with TickerProviderSt
 
   // Inline (non-modal) username prompt widget so bottom navigation remains usable.
   Widget _buildUsernamePrompt(ColorScheme cs, bool isDarkMode) {
-    final TextEditingController ctl = TextEditingController(text: username);
-    final formKey = GlobalKey<FormState>();
+    // Moved formKey to a state field to avoid rebuild focus issues
+    // final formKey = GlobalKey<FormState>();
+    final allowed = RegExp(r"^[A-Za-z0-9 _.'-]+");
+    final trimmed = _usernameController.text.trim();
+    final isValid = trimmed.length >= 3 && allowed.hasMatch(trimmed);
 
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: isDarkMode ? 1 : 3,
+        color: isDarkMode ? const Color(0xFF1A2B3D) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: cs.primary.withOpacity(0.18)),
+        ),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Set your user name', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDarkMode ? Colors.white : cs.onSurface)),
-              const SizedBox(height: 8),
-              Text('Provide a user name to use group feature.', style: TextStyle(color: isDarkMode ? Colors.grey.shade400 : cs.onSurfaceVariant)),
-              const SizedBox(height: 12),
-              Form(
-                key: formKey,
-                child: TextFormField(
+          child: Form(
+            key: _usernameFormKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Set your user name',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: isDarkMode ? Colors.white : cs.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Choose a name for group rooms.',
+                            style: TextStyle(
+                              color: isDarkMode ? Colors.grey.shade400 : cs.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
                   controller: _usernameController,
                   focusNode: _usernameFocusNode,
-                  textCapitalization: TextCapitalization.words,
                   autofocus: true,
+                  // Ensure taps inside the field don't bubble to any global unfocus handlers
+                  onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                  textCapitalization: TextCapitalization.words,
                   textInputAction: TextInputAction.done,
+                  maxLength: 30,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r"[A-Za-z0-9 _.'-]")),
+                    LengthLimitingTextInputFormatter(30),
+                  ],
                   decoration: InputDecoration(
-                    labelText: 'Display name',
-                    hintText: 'e.g. Jane Doe',
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _usernameController.clear();
-                      },
+                    labelText: 'User name',
+                    hintText: 'e.g. JaneDoe',
+                    helperText: 'Letters, numbers',
+                    counterText: '',
+                    prefixIcon: const Icon(Icons.person_outline, color: Colors.blue),
+                    filled: true,
+                    fillColor: isDarkMode
+                        ? Colors.blue.shade900.withOpacity(0.2)
+                        : Colors.blue.shade50,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.blue.shade200),
                     ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: isDarkMode ? Colors.blue.shade300 : Colors.blue.shade600,
+                        width: 2,
+                      ),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: cs.error),
+                    ),
+                    suffixIcon: _usernameController.text.isNotEmpty
+                        ? IconButton(
+                      tooltip: 'Clear',
+                      icon: Icon(Icons.clear_rounded, color: cs.onSurfaceVariant),
+                      onPressed: () {
+                        setState(() => _usernameController.clear());
+                      },
+                    )
+                        : null,
                   ),
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Name is required';
-                    if (v.trim().length < 3) return 'Name must be at least 3 characters';
+                    final t = (v ?? '').trim();
+                    if (t.isEmpty) return 'Name required';
+                    if (t.length < 3) return 'Min 3 characters';
+                    if (!allowed.hasMatch(t)) return 'Invalid characters';
                     return null;
                   },
+                  onChanged: (_) => setState(() {}),
+                  onFieldSubmitted: (_) async {
+                    if (isValid && !_isSubmittingUsername) {
+                      FocusScope.of(context).unfocus();
+                      await _handleSaveUsername(trimmed);
+                    }
+                  },
                 ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  FilledButton(
-                    onPressed: _isSubmittingUsername
-                        ? null
-                        : () async {
-                            if (!formKey.currentState!.validate()) return;
-                            final name = ctl.text.trim();
-                            setState(() => _isSubmittingUsername = true);
-                            try {
-                              final res = await APIService.setUsernameAPI(name);
-                              if (res['success'] == true && res['id'] != null) {
-                                final id = res['id'].toString();
-                                await _prefs.setString('username', name);
-                                await _prefs.setString('uid', id);
-                                setState(() {
-                                  uid = id;
-                                  username = name;
-                                  _requireUsername = false;
-                                });
-                                // now load groups
-                                await _loadGroups();
-                                _showSuccessSnack('Welcome, $name');
-                              } else {
-                                _showErrorSnack(res['message'] ?? res['error'] ?? 'Failed to create user');
-                              }
-                            } catch (e) {
-                              _showErrorSnack('Error: ${e.toString()}');
-                            } finally {
-                              if (mounted) setState(() => _isSubmittingUsername = false);
-                            }
-                          },
-                    child: _isSubmittingUsername ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Save'),
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: (!isValid || _isSubmittingUsername)
+                          ? null
+                          : () async {
+                              if (_usernameFormKey.currentState?.validate() != true) return;
+                              FocusScope.of(context).unfocus();
+                              await _handleSaveUsername(_usernameController.text.trim());
+                            },
+                      style: ButtonStyle(
+                        backgroundColor: MaterialStateProperty.resolveWith<Color>((states) {
+                          if (states.contains(MaterialState.disabled)) {
+                            return isDarkMode ? Colors.blue.withOpacity(0.2) : const Color(0xFF2196F3).withOpacity(0.1); // disabled bg
+                          }
+                          return isDarkMode ? Colors.blue.withOpacity(0.2) : const Color(0xFF2195F1).withOpacity(0.1);
+                        }),
+                        foregroundColor: MaterialStateProperty.resolveWith<Color>((states) {
+                          if (states.contains(MaterialState.disabled)) {
+                            return Colors.blue; // force white even when disabled
+                          }
+                          return Colors.blue; // normal state
+                        }),
+                        padding: MaterialStateProperty.all(
+                          const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                        ),
+                        shape: MaterialStateProperty.all(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: (isDarkMode ? Colors.blue.shade300 : const Color(0xFF2196F3)).withOpacity(0.2),
+                            ),
+                          ),
+                        ),
+                      ),
+                      icon: _isSubmittingUsername
+                          ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.blue,
+                        ),
+                      )
+                          : Icon(Icons.check, color: Colors.blue[700]),
+                      label: const Text('Save'),
+                    )
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+
+  }
+
+  Future<void> _handleSaveUsername(String name) async {
+    setState(() => _isSubmittingUsername = true);
+    try {
+      final res = await APIService.setUsernameAPI(name);
+      if (res['success'] == true && res['id'] != null) {
+        final id = res['id'].toString();
+        await _prefs.setString('username', name);
+        await _prefs.setString('uid', id);
+        setState(() {
+          uid = id;
+          username = name;
+          _requireUsername = false;
+        });
+        await _loadGroups();
+        _showSuccessSnack('Welcome, $name');
+      } else {
+        _showErrorSnack(res['message'] ?? res['error'] ?? 'Failed to create user');
+      }
+    } catch (e) {
+      _showErrorSnack('Error: ${e.toString()}');
+    } finally {
+      if (mounted) setState(() => _isSubmittingUsername = false);
+    }
   }
 
   Future<void> _loadGroups() async {
@@ -350,51 +465,65 @@ class _GroupListScreenState extends State<GroupListScreen> with TickerProviderSt
         (themeNotifier.themeMode == ThemeMode.system &&
             MediaQuery.of(context).platformBrightness == Brightness.dark);
 
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        backgroundColor: isDarkMode ? const Color(0xFF0D1A26) : const Color(0xFFFCF9F5),
-        bottomNavigationBar: const BottomNavBar(selectedIndex: 2),
-        body: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(cs, isDarkMode),
-              const SizedBox(height: 8),
-              // If a username is required, show the inline prompt (non-modal). User can still use bottom nav.
-              if (_requireUsername) ...[
-                _buildUsernamePrompt(cs, isDarkMode),
-                // show a friendly call to action / empty area
-                Expanded(child: Center(child: Text('Set your user name to access groups', style: TextStyle(color: isDarkMode ? Colors.white70 : cs.onSurfaceVariant))))
-              ] else ...[
-                Expanded(
-                  child: loading
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Lottie.asset(
-                                './assets/lottie/upload.json',
-                                width: 200,
-                                fit: BoxFit.fill,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Loading your groups...',
-                                style: TextStyle(color: isDarkMode ? Colors.white70 : cs.onSurfaceVariant),
-                              ),
-                            ],
-                          ),
-                        )
-                      : groups.isEmpty
-                          ? _buildEmptyState(cs, isDarkMode)
-                          : RefreshIndicator(
-                              onRefresh: _loadGroups,
-                              child: _filteredGroups.isEmpty ? _buildNoSearchResults(cs, isDarkMode) : _buildGroupList(cs, isDarkMode),
+    return Scaffold(
+      // Keep bottom navigation fixed; handle keyboard insets within body
+      resizeToAvoidBottomInset: false,
+      backgroundColor: isDarkMode ? const Color(0xFF0D1A26) : const Color(0xFFFCF9F5),
+      bottomNavigationBar: const BottomNavBar(selectedIndex: 2),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(cs, isDarkMode),
+            const SizedBox(height: 8),
+            // If a username is required, show the inline prompt (non-modal). User can still use bottom nav.
+            if (_requireUsername) ...[
+              // Manually lift the prompt above the keyboard without moving the bottom nav
+              AnimatedPadding(
+                duration: const Duration(milliseconds: 150),
+                curve: Curves.easeOut,
+                padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+                child: _buildUsernamePrompt(cs, isDarkMode),
+              ),
+              // Expanded(
+              //   child: SingleChildScrollView(
+              //     padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+              //     child: Center(
+              //       child: Text(
+              //         'Set your user name to access groups',
+              //         style: TextStyle(color: isDarkMode ? Colors.white70 : cs.onSurfaceVariant),
+              //       ),
+              //     ),
+              //   ),
+              // ),
+            ] else ...[
+              Expanded(
+                child: loading
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Lottie.asset(
+                              './assets/lottie/upload.json',
+                              width: 200,
+                              fit: BoxFit.fill,
                             ),
-                ),
-              ],
+                            const SizedBox(height: 16),
+                            Text(
+                              'Loading your groups...',
+                              style: TextStyle(color: isDarkMode ? Colors.white70 : cs.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      )
+                    : groups.isEmpty
+                        ? _buildEmptyState(cs, isDarkMode)
+                        : RefreshIndicator(
+                            onRefresh: _loadGroups,
+                            child: _filteredGroups.isEmpty ? _buildNoSearchResults(cs, isDarkMode) : _buildGroupList(cs, isDarkMode),
+                          ),
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -423,7 +552,7 @@ class _GroupListScreenState extends State<GroupListScreen> with TickerProviderSt
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Welcome, $username',
+                    username.isNotEmpty ? 'Welcome, $username' : 'Welcome',
                     style: TextStyle(
                       fontSize: 16,
                       color: isDarkMode ? Colors.grey.shade400 : const Color(0xFF666666),

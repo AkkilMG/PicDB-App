@@ -14,6 +14,7 @@ import 'package:permission_handler/permission_handler.dart'; // Add missing perm
 import 'package:flutter_animate/flutter_animate.dart'; // Add missing animate import
 import 'package:picdb/services/theme_notifier.dart';
 import 'package:provider/provider.dart';
+import 'package:showcaseview/showcaseview.dart';
 
 // Import widgets
 import '../widgets/bottom_nav.dart';
@@ -45,6 +46,16 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
   bool _isCancelled = false;
   ThemeMode _themeMode = ThemeMode.system;
 
+  // Showcase keys
+  final GlobalKey _uploadBoxKey = GlobalKey();
+  final GlobalKey _galleryKey = GlobalKey();
+  final GlobalKey _cameraKey = GlobalKey();
+  final GlobalKey _cancelKey = GlobalKey();
+  final GlobalKey _resultKey = GlobalKey();
+  bool _tutorialStarted = false;
+  final GlobalKey<ShowCaseWidgetState> _showCaseKey = GlobalKey<ShowCaseWidgetState>();
+  bool _shouldStartTutorial = false;
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +68,15 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
     });
     initPrefs();
     Future.delayed(const Duration(seconds: 2), initImages);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await initPrefs();
+      final seen = prefs.getBool('upload_tutorial') ?? false;
+      if (!seen && mounted && !_tutorialStarted) {
+        _shouldStartTutorial = true; // defer actual start until ShowCaseWidget is built
+        setState(() {});
+      }
+    });
   }
 
   Future<bool> _requestPermissions(ImageSource source) async {
@@ -333,21 +353,57 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildSourceOption(
-                      icon: Icons.photo_library,
-                      label: 'Gallery',
-                      onTap: () {
+                    Showcase.withWidget(
+                      key: _galleryKey,
+                      disposeOnTap: true,
+                      targetShapeBorder: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                      ),
+                      container: _buildShowcaseContent(
+                        title: 'Pick from Gallery',
+                        description: 'Pick multiple images from your gallery',
+                        onSkip: _skipMainTutorial,
+                      ),
+                      onTargetClick: () {
                         Navigator.pop(context);
                         _pickMultipleImages();
+                        _continueToCancelShowcase();
                       },
+                      child: _buildSourceOption(
+                        icon: Icons.photo_library,
+                        label: 'Gallery',
+                        onTap: () {
+                          Navigator.pop(context);
+                          _pickMultipleImages();
+                          _continueToCancelShowcase();
+                        },
+                      ),
                     ),
-                    _buildSourceOption(
-                      icon: Icons.camera_alt,
-                      label: 'Camera',
-                      onTap: () {
+                    Showcase.withWidget(
+                      key: _cameraKey,
+                      disposeOnTap: true,
+                      targetShapeBorder: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                      ),
+                      container: _buildShowcaseContent(
+                        title: 'Use Camera',
+                        description: 'Capture a new photo using the camera',
+                        onSkip: _skipMainTutorial,
+                      ),
+                      onTargetClick: () {
                         Navigator.pop(context);
                         _pickImage(ImageSource.camera);
+                        _continueToCancelShowcase();
                       },
+                      child: _buildSourceOption(
+                        icon: Icons.camera_alt,
+                        label: 'Camera',
+                        onTap: () {
+                          Navigator.pop(context);
+                          _pickImage(ImageSource.camera);
+                          _continueToCancelShowcase();
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -357,7 +413,10 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
           ),
         );
       },
-    );
+    ).whenComplete(() {
+      // Removed premature _markTutorialDone; allow tutorial to proceed to upload & result steps.
+    });
+    _continueToSourceShowcase();
   }
 
   Widget _buildSourceOption({
@@ -441,6 +500,10 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
         _isUploading = true;
         _uploadProgress = 0.0;
       });
+      // Show cancel tutorial step when upload starts
+      if (_tutorialStarted) {
+        _continueToCancelShowcase();
+      }
 
       // Check for cancellation at the beginning
       if (_isCancelled) return;
@@ -536,6 +599,10 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
             iconPath: 'assets/icons/success.svg'
           );
         }
+        // Trigger next tutorial step (result card) after first successful upload.
+        if (_tutorialStarted) {
+          _continueToResultShowcase();
+        }
       } else {
         if (!_isCancelled && result['cancelled'] != true) {
           toaster(
@@ -568,6 +635,43 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
     }
   }
 
+  void _markTutorialDone() async {
+    await prefs.setBool('upload_tutorial', true);
+    _tutorialStarted = false;
+  }
+
+  void _startUploadTutorial() {
+    _tutorialStarted = true;
+    _shouldStartTutorial = false;
+    // Start with upload box using ShowCaseWidget key
+    _showCaseKey.currentState?.startShowCase([_uploadBoxKey]);
+  }
+
+  // After opening source dialog, show gallery & camera highlights
+  void _continueToSourceShowcase() {
+    Future.delayed(const Duration(milliseconds: 300), () {
+      _showCaseKey.currentState?.startShowCase([_galleryKey, _cameraKey]);
+    });
+  }
+
+  // When upload progresses, show cancel highlight
+  void _continueToCancelShowcase() {
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted && _isUploading && _uploadProgress < 1.0) {
+        _showCaseKey.currentState?.startShowCase([_cancelKey]);
+      }
+    });
+  }
+
+  // When results appear, show first item
+  void _continueToResultShowcase() {
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted && _results.isNotEmpty) {
+        _showCaseKey.currentState?.startShowCase([_resultKey]);
+      }
+    });
+  }
+
   Widget _buildAnimatedContainer(Widget child, {int delay = 0}) {
     return Container(
       child: child,
@@ -577,6 +681,70 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
         delay: Duration(milliseconds: delay),
       )
       .slideY(begin: 0.2);
+  }
+
+  // Helper to build consistent tutorial content with a Skip action
+  Widget _buildShowcaseContent({required String title, required String description, VoidCallback? onSkip}) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    bool isDarkMode;
+    if (themeNotifier.themeMode == ThemeMode.system) {
+      isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
+    } else {
+      isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
+    }
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1C2A3A) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: isDarkMode ? Colors.black.withOpacity(0.25) : Colors.grey.shade300,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: isDarkMode ? Colors.white : Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            description,
+            style: TextStyle(
+              fontSize: 14,
+              color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: onSkip,
+              child: const Text('Skip tutorial'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _skipMainTutorial() {
+    _markTutorialDone();
+    _showCaseKey.currentState?.dismiss();
+    setState(() {
+      _shouldStartTutorial = false;
+      _tutorialStarted = false;
+    });
   }
 
   Widget _buildUploadProgress() {
@@ -659,13 +827,38 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.cancel, color: Colors.red, size: 22),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onPressed: _cancelUpload,
-                tooltip: 'Cancel Upload',
-              ),
+              // Wrap cancel IconButton with Showcase when tutorial is active
+              if (_isUploading)
+                Showcase.withWidget(
+                  key: _cancelKey,
+                  disposeOnTap: true,
+                  targetShapeBorder: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  container: _buildShowcaseContent(
+                    title: 'Cancel Upload',
+                    description: 'Tap to cancel the current upload',
+                    onSkip: _skipMainTutorial,
+                  ),
+                  onTargetClick: () {
+                    _cancelUpload();
+                  },
+                  child: IconButton(
+                    icon: const Icon(Icons.cancel, color: Colors.red, size: 22),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: _cancelUpload,
+                    tooltip: 'Cancel Upload',
+                  ),
+                )
+              else
+                IconButton(
+                  icon: const Icon(Icons.cancel, color: Colors.red, size: 22),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: _cancelUpload,
+                  tooltip: 'Cancel Upload',
+                ),
               const SizedBox(width: 4),
               SizedBox(
                 width: 45,
@@ -708,269 +901,307 @@ class _UploadImageState extends State<UploadImage> with SingleTickerProviderStat
       isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
     }
     return ConnectivityWidget(
-      child: Scaffold(
-        bottomNavigationBar: const BottomNavBar(selectedIndex: 0),
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: isDarkMode
-                  ? [const Color(0xFF0D1A26), const Color(0xFF1A2B3D)]
-                  : [Colors.blue.shade50, Colors.white],
-            ),
-          ),
-          child: SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildAnimatedContainer(
-                          Text(
-                            'Upload Image',
-                            style: TextStyle(
-                              fontSize: 32,
-                              color: isDarkMode ? Colors.white : Colors.grey.shade800,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _buildAnimatedContainer(
-                          Text(
-                            'Share your moments with the world',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                            ),
-                          ),
-                          delay: 200,
-                        ),
-                      ],
-                    ),
-                  ),
+      child: ShowCaseWidget(
+        key: _showCaseKey,
+        onFinish: _markTutorialDone,
+        onStart: (index, key) {},
+        builder: (showcaseContext) {
+          // After first frame, start tutorial if flagged
+          if (_shouldStartTutorial && !_tutorialStarted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _startUploadTutorial();
+              }
+            });
+          }
+          return Scaffold(
+            bottomNavigationBar: const BottomNavBar(selectedIndex: 0),
+            body: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDarkMode
+                      ? [const Color(0xFF0D1A26), const Color(0xFF1A2B3D)]
+                      : [Colors.blue.shade50, Colors.white],
                 ),
-                if (!_isUploading && _results.isEmpty)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      child: GestureDetector(
-                        onTap: _showImageSourceDialog,
-                        child: DottedBorder(
-                          borderType: BorderType.RRect,
-                          radius: const Radius.circular(20),
-                          dashPattern: const [10, 4],
-                          strokeCap: StrokeCap.round,
-                          color: isDarkMode ? Colors.blue.shade300 : Colors.blue.shade400,
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(32),
-                            decoration: BoxDecoration(
-                              color: isDarkMode ? Colors.blue.shade900.withOpacity(0.4) : Colors.blue.shade50,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Column(
-                              children: [
-                                Lottie.asset(
-                                  './assets/lottie/upload.json',
-                                  width: 150,
-                                  height: 150,
-                                  fit: BoxFit.contain,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Tap to upload images',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Select multiple images • Max: 65MB each',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ).animate()
-                        .fadeIn(delay: 400.ms, duration: 600.ms)
-                        .slideY(begin: 0.2),
-                    ),
-                  ),
-
-                if (_isUploading)
-                  SliverToBoxAdapter(
-                    child: _buildUploadProgress().animate()
-                      .fadeIn(duration: 300.ms)
-                      .slideY(begin: 0.2),
-                  ),
-
-                if (_results.isNotEmpty)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Recent Uploads',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: isDarkMode ? Colors.white : Colors.grey.shade800,
-                            ),
-                          ),
-                          TextButton.icon(
-                            onPressed: _showImageSourceDialog,
-                            icon: Icon(Icons.add, color: isDarkMode ? Colors.blue.shade300 : Colors.blue.shade700),
-                            label: Text(
-                              'Upload More',
+              ),
+              child: SafeArea(
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildAnimatedContainer(Text(
+                              'Upload Image',
                               style: TextStyle(
-                                color: isDarkMode ? Colors.blue.shade300 : Colors.blue.shade700,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 32,
+                                color: isDarkMode ? Colors.white : Colors.grey.shade800,
+                                fontWeight: FontWeight.bold,
                               ),
+                            )),
+                            const SizedBox(height: 8),
+                            _buildAnimatedContainer(
+                              Text(
+                                'Share your moments with the world',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                                ),
+                              ),
+                              delay: 200,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-
-                if (_results.isNotEmpty)
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final result = _results[index];
-                          return GestureDetector(
-                            onTap: () => selectImage(result),
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 16),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                color: isDarkMode ? const Color(0xFF1C2A3A) : Colors.white,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: isDarkMode ? Colors.black.withOpacity(0.2) : Colors.grey.shade200,
-                                    offset: const Offset(0, 4),
-                                    blurRadius: 8,
-                                  )
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(16),
-                                    ),
-                                    child: AspectRatio(
-                                      aspectRatio: 16 / 9,
-                                      child: Hero(
-                                        tag: 'image_${result['link']}',
-                                        child: Image.network(
-                                          result['link'],
-                                          fit: BoxFit.cover,
-                                          loadingBuilder: (context, child, loadingProgress) {
-                                            if (loadingProgress == null) return child;
-                                            return Container(
-                                              color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100,
-                                              child: Center(
-                                                child: CircularProgressIndicator(
-                                                  value: loadingProgress.expectedTotalBytes != null
-                                                      ? loadingProgress.cumulativeBytesLoaded /
-                                                          loadingProgress.expectedTotalBytes!
-                                                      : null,
-                                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                                    isDarkMode ? Colors.blue.shade700 : Colors.blue.shade200,
-                                                  ),
-                                                ),
-                                              ),
-                                            );
-                                          },
+                    if (!_isUploading && _results.isEmpty)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                          child: Showcase.withWidget(
+                            key: _uploadBoxKey,
+                            disposeOnTap: true,
+                            targetShapeBorder: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.all(Radius.circular(20)),
+                            ),
+                            container: _buildShowcaseContent(
+                              title: 'Upload',
+                              description: 'Tap here to start uploading images',
+                              onSkip: _skipMainTutorial,
+                            ),
+                            onTargetClick: _showImageSourceDialog,
+                            child: GestureDetector(
+                              onTap: _showImageSourceDialog,
+                              child: DottedBorder(
+                                borderType: BorderType.RRect,
+                                radius: const Radius.circular(20),
+                                dashPattern: const [10, 4],
+                                strokeCap: StrokeCap.round,
+                                color: isDarkMode ? Colors.blue.shade300 : Colors.blue.shade400,
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(32),
+                                  decoration: BoxDecoration(
+                                    color: isDarkMode ? Colors.blue.shade900.withOpacity(0.4) : Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Lottie.asset(
+                                        './assets/lottie/upload.json',
+                                        width: 150,
+                                        height: 150,
+                                        fit: BoxFit.contain,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'Tap to upload images',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
+                                          fontWeight: FontWeight.w500,
                                         ),
                                       ),
-                                    ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Select multiple images • Max: 65MB each',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                result['title'],
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: isDarkMode ? Colors.white : Colors.black,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.link,
-                                                    size: 14,
-                                                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                                ),
+                              ).animate()
+                                .fadeIn(delay: 400.ms, duration: 600.ms)
+                                .slideY(begin: 0.2),
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (_isUploading)
+                      SliverToBoxAdapter(
+                        child: _buildUploadProgress().animate()
+                          .fadeIn(duration: 300.ms)
+                          .slideY(begin: 0.2),
+                      ),
+                    if (_results.isNotEmpty)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Recent Uploads',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDarkMode ? Colors.white : Colors.grey.shade800,
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: _showImageSourceDialog,
+                                icon: Icon(Icons.add, color: isDarkMode ? Colors.blue.shade300 : Colors.blue.shade700),
+                                label: Text(
+                                  'Upload More',
+                                  style: TextStyle(
+                                    color: isDarkMode ? Colors.blue.shade300 : Colors.blue.shade700,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    if (_results.isNotEmpty)
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final result = _results[index];
+                              final item = GestureDetector(
+                                onTap: () => selectImage(result),
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    color: isDarkMode ? const Color(0xFF1C2A3A) : Colors.white,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: isDarkMode ? Colors.black.withOpacity(0.2) : Colors.grey.shade200,
+                                        offset: const Offset(0, 4),
+                                        blurRadius: 8,
+                                      )
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                                        child: AspectRatio(
+                                          aspectRatio: 16 / 9,
+                                          child: Hero(
+                                            tag: 'image_${result['link']}',
+                                            child: Image.network(
+                                              result['link'],
+                                              fit: BoxFit.cover,
+                                              loadingBuilder: (context, child, loadingProgress) {
+                                                if (loadingProgress == null) return child;
+                                                return Container(
+                                                  color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100,
+                                                  child: Center(
+                                                    child: CircularProgressIndicator(
+                                                      value: loadingProgress.expectedTotalBytes != null
+                                                          ? loadingProgress.cumulativeBytesLoaded /
+                                                              loadingProgress.expectedTotalBytes!
+                                                          : null,
+                                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                                        isDarkMode ? Colors.blue.shade700 : Colors.blue.shade200,
+                                                      ),
+                                                    ),
                                                   ),
-                                                  const SizedBox(width: 4),
-                                                  Expanded(
-                                                    child: Text(
-                                                      result['view'],
-                                                      style: TextStyle(
-                                                        fontSize: 14,
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(16),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    result['title'],
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: isDarkMode ? Colors.white : Colors.black,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.link,
+                                                        size: 14,
                                                         color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                                                       ),
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
-                                                    ),
+                                                      const SizedBox(width: 4),
+                                                      Expanded(
+                                                        child: Text(
+                                                          result['view'],
+                                                          style: TextStyle(
+                                                            fontSize: 14,
+                                                            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                                                          ),
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow.ellipsis,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ],
                                               ),
-                                            ],
-                                          ),
+                                            ),
+                                            IconButton(
+                                              icon: Icon(Icons.share, color: isDarkMode ? Colors.white : Colors.black),
+                                              onPressed: () {},
+                                              tooltip: 'Share Image',
+                                            ),
+                                          ],
                                         ),
-                                        IconButton(
-                                          icon: Icon(Icons.share, color: isDarkMode ? Colors.white : Colors.black),
-                                          onPressed: () {
-                                            // Implement share functionality
-                                          },
-                                          tooltip: 'Share Image',
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ),
-                          ).animate()
-                            .fadeIn(delay: (100 * index).ms, duration: 400.ms)
-                            .slideX(begin: 0.2);
-                        },
-                        childCount: _results.length,
+                                ),
+                              ).animate().fadeIn(delay: (100 * index).ms, duration: 400.ms).slideX(begin: 0.2);
+
+                              if (index == 0) {
+                                return Showcase.withWidget(
+                                  key: _resultKey,
+                                  disposeOnTap: true,
+                                  targetShapeBorder: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.all(Radius.circular(16)),
+                                  ),
+                                  container: _buildShowcaseContent(
+                                    title: 'Recent Upload',
+                                    description: 'Tap a result to view details and share',
+                                    onSkip: _skipMainTutorial,
+                                  ),
+                                  onTargetClick: () {
+                                    selectImage(result);
+                                    _markTutorialDone();
+                                  },
+                                  child: item,
+                                );
+                              }
+                              return item;
+                            },
+                            childCount: _results.length,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-              ].animate(interval: const Duration(milliseconds: 50)),
+                  ].animate(interval: const Duration(milliseconds: 50)),
+                ),
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

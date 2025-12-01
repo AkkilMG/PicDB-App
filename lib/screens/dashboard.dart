@@ -476,6 +476,7 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
 
     return ConnectivityWidget(
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         backgroundColor: isDarkMode ? const Color(0xFF0D1A26) : const Color(0xFFFCF9F5),
         bottomNavigationBar: const BottomNavBar(selectedIndex: 1,),
         body: SafeArea(
@@ -511,12 +512,12 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Lottie.asset(
-                              './assets/lottie/search.json',
-                              width: 250,
-                              fit: BoxFit.fill,
-                            ),
-                            const SizedBox(height: 16),
+                            // Lottie.asset(
+                            //   './assets/lottie/search.json',
+                            //   width: 250,
+                            //   fit: BoxFit.fill,
+                            // ),
+                            // const SizedBox(height: 16),
                             Text(
                               _searchController.text.isEmpty
                                   ? 'No images uploaded yet'
@@ -528,22 +529,22 @@ class _DashboardState extends State<DashboardScreen> with SingleTickerProviderSt
                               ),
                               textAlign: TextAlign.center,
                             ),
-                            if (_searchController.text.isNotEmpty) ...[
-                              const SizedBox(height: 7),
-                              TextButton.icon(
-                                onPressed: () {
-                                  setState(() {
-                                    _searchController.clear();
-                                    filterImages('');
-                                  });
-                                },
-                                icon: const Icon(Icons.refresh_rounded),
-                                label: const Text('Clear search'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: isDarkMode ? Colors.blue.shade300 : const Color(0xFF2196F3),
-                                ),
-                              ),
-                            ],
+                            // if (_searchController.text.isNotEmpty) ...[
+                            //   const SizedBox(height: 7),
+                            //   TextButton.icon(
+                            //     onPressed: () {
+                            //       setState(() {
+                            //         _searchController.clear();
+                            //         filterImages('');
+                            //       });
+                            //     },
+                            //     icon: const Icon(Icons.refresh_rounded),
+                            //     label: const Text('Clear search'),
+                            //     style: TextButton.styleFrom(
+                            //       foregroundColor: isDarkMode ? Colors.blue.shade300 : const Color(0xFF2196F3),
+                            //     ),
+                            //   ),
+                            // ],
                           ],
                         ),
                       )

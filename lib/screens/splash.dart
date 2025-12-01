@@ -81,7 +81,6 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     List<String> recentNotifyId = prefs.getStringList('recent_notify') ?? [];
-
     try {
       final notification = await APIService().fetchNotify();
       if (notification['success'] == true) {

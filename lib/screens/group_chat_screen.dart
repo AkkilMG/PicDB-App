@@ -315,6 +315,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> with TickerProviderSt
     final scaffoldBg = isDarkMode ? const Color(0xFF081018) : const Color(0xFFFCF9F5);
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: scaffoldBg,
       appBar: PreferredSize(preferredSize: const Size.fromHeight(96), child: _buildAppBar(primaryBlue, isDarkMode)),
       body: Column(children: [

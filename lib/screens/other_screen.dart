@@ -46,6 +46,7 @@ class _OtherScreenState extends State<OtherScreen> {
             MediaQuery.of(context).platformBrightness == Brightness.dark);
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: isDarkMode ? const Color(0xFF0D1A26) : const Color(0xFFFCF9F5),
       bottomNavigationBar: const BottomNavBar(selectedIndex: 3),
       body: SafeArea(
