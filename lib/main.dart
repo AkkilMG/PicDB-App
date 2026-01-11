@@ -3,7 +3,6 @@ import 'package:picdb/screens/dashboard.dart';
 import 'package:picdb/screens/onboarding.dart';
 import 'package:picdb/screens/splash.dart';
 import 'package:picdb/screens/upload.dart';
-import 'package:picdb/screens/welcome.dart';
 import 'package:picdb/screens/group_chat_screen.dart';
 import 'package:picdb/services/notify_service.dart';
 import 'package:picdb/services/theme_notifier.dart';
@@ -65,7 +64,6 @@ class MyApp extends StatelessWidget {
           routes: {
             "/splash": (context) => const SplashScreen(),
             "/onboarding": (context) => const OnboardingScreen(),
-            "/welcome": (context) => const WelcomeScreen(),
             "/upload": (context) => const UploadImage(),
             "/dashboard": (context) => const DashboardScreen(),
           },

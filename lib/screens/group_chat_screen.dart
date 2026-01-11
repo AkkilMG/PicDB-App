@@ -313,25 +313,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> with TickerProviderSt
     final primaryBlue = isDarkMode ? const Color(0xFFCCE6FF) : const Color(0xFF0D1F2D);
     final accentBlue = isDarkMode ? const Color(0xFF4FC3F7) : const Color(0xFF2196F3);
     final scaffoldBg = isDarkMode ? const Color(0xFF081018) : const Color(0xFFFCF9F5);
+    final cover = _groupDetails?['coverImage'];
 
     return Scaffold(
-      resizeToAvoidBottomInset: false,
       backgroundColor: scaffoldBg,
-      appBar: PreferredSize(preferredSize: const Size.fromHeight(96), child: _buildAppBar(primaryBlue, isDarkMode)),
-      body: Column(children: [
-        if (_loadingGroupData) _buildLoadingHeader(accentBlue, primaryBlue, isDarkMode),
-        Expanded(child: _buildMessagesList(isDarkMode, primaryBlue, accentBlue)),
-        if (_showScrollToBottom) _buildScrollToBottomButton(primaryBlue),
-        _buildMessageInput(accentBlue, isDarkMode),
-      ]),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar(Color primaryBlue, bool isDarkMode) {
-     final cover = _groupDetails?['coverImage'];
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(96),
-      child: AppBar(
+      appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
         systemOverlayStyle: isDarkMode ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
@@ -426,6 +412,23 @@ class _GroupChatScreenState extends State<GroupChatScreen> with TickerProviderSt
             ])
           ]),
         ),
+      ),
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              Expanded(
+                child: _buildMessagesList(isDarkMode, primaryBlue, accentBlue),
+              ),
+              _buildMessageInput(accentBlue, isDarkMode),
+            ],
+          ),
+          Positioned(
+            bottom: 80,
+            right: 16,
+            child: _buildScrollToBottomButton(primaryBlue),
+          ),
+        ],
       ),
     );
   }
@@ -1011,7 +1014,7 @@ class _FullScreenImageViewer extends StatelessWidget {
   final String? heroTag;
   final String title;
 
-  const _FullScreenImageViewer({Key? key, required this.imageUrl, required this.username, required this.title, required this.timestamp, this.heroTag}) : super(key: key);
+  _FullScreenImageViewer({Key? key, required this.imageUrl, required this.username, required this.title, required this.timestamp, this.heroTag}) : super(key: key);
 
   // String _getFileName() {
   //   try {
@@ -1072,11 +1075,16 @@ class _FullScreenImageViewer extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.black.withAlpha(200),
         elevation: 0,
-        // Show the file name in the app bar
         title: Text(title, style: const TextStyle(color: Colors.white)),
-        leading: IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => Navigator.of(context).pop()),
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         actions: [
-          IconButton(icon: const Icon(Icons.more_vert, color: Colors.white), onPressed: () => _showMoreOptions(context)),
+          IconButton(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            onPressed: () => _showMoreOptions(context),
+          ),
         ],
       ),
       body: Center(

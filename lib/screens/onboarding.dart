@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
+import '../services/theme_notifier.dart';
 import '../widgets/onboarding_content.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -185,6 +187,34 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildUsernameInputPage() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDarkMode = themeNotifier.themeMode == ThemeMode.dark ||
+        (themeNotifier.themeMode == ThemeMode.system &&
+            MediaQuery.of(context).platformBrightness == Brightness.dark);
+
+    final inputBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+      ),
+    );
+
+    final focusedInputBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: isDarkMode ? const Color(0xFF4A90E2) : const Color(0xFF0D1F2D),
+        width: 2,
+      ),
+    );
+
+    final errorInputBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(
+        color: Colors.red,
+        width: 1.5,
+      ),
+    );
+
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: SingleChildScrollView(
@@ -218,14 +248,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               const SizedBox(height: 20),
               TextField(
                 controller: _usernameController,
+                enabled: !_hasUsername,
+                style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
                 decoration: InputDecoration(
+                  prefixIcon: Icon(
+                    Icons.person_outline,
+                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                  ),
                   labelText: 'Username',
-                  hintText: 'Enter a username',
+                  labelStyle: TextStyle(
+                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                  ),
+                  hintText: 'Enter your desired username',
+                  hintStyle: TextStyle(
+                    color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400,
+                  ),
                   errorText: _usernameError,
-                  border: const OutlineInputBorder(),
                   filled: true,
-                  fillColor: Colors.grey.shade100,
-                  prefixIcon: const Icon(Icons.person),
+                  fillColor: isDarkMode ? const Color(0xFF1A2B3D) : Colors.white,
+                  border: inputBorder,
+                  enabledBorder: inputBorder,
+                  focusedBorder: focusedInputBorder,
+                  errorBorder: errorInputBorder,
+                  focusedErrorBorder: errorInputBorder,
+                  disabledBorder: inputBorder,
                 ),
                 onChanged: (value) {
                   setState(() {
@@ -233,12 +279,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   });
                 },
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 30),
               if (_isSubmitting)
-                const Center(
-                  child: CircularProgressIndicator(),
+                const Center(child: CircularProgressIndicator())
+              else
+                Center(
+                  child: ElevatedButton(
+                    onPressed: (_hasUsername || _isUsernameValid) ? _handleContinue : null,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 40, vertical: 15),
+                      backgroundColor: isDarkMode ? const Color(0xFF4A90E2) : const Color(0xFF0D1F2D),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Continue', style: TextStyle(fontSize: 16, color: Colors.white)),
+                  ),
                 ),
-              const SizedBox(height: 40),
             ],
           ),
         ),
@@ -247,210 +305,55 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildPolicyPage() {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDarkMode = themeNotifier.themeMode == ThemeMode.dark ||
+        (themeNotifier.themeMode == ThemeMode.system &&
+            MediaQuery.of(context).platformBrightness == Brightness.dark);
     return Padding(
       padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Almost there!',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Lottie.asset(
-                "assets/lottie/policy.json",
-                height: 250,
-              ),
-              ]
-          ),
-          const Text(
-            'Please review and accept our policies to continue:',
-            style: TextStyle(fontSize: 16),
-          ),
-          const SizedBox(height: 4),
-          Card(
-            elevation: 2,
-            child: Column(
-                children: [
-                  CheckboxListTile(
-                    title: Row(
-                      children: [
-                        const Text(
-                          'I accept the ',
-                          style: TextStyle(
-                            fontSize: 14,
-                          ),),
-                        GestureDetector(
-                          onTap: () => _launchURL('https://picdb.arkynox.com/policy/mobile/terms-of-service'),
-                          child: const Text(
-                            'Terms of Service',
-                            style: TextStyle(
-                              color: Colors.blue,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    value: termsAccepted,
-                    onChanged: (bool? value) {
-                      setState(() {
-                        termsAccepted = value ?? false;
-                      });
-                    },
-                  ),
-                  const Divider(),
-                  CheckboxListTile(
-                    title: Row(
-                      children: [
-                        const Text(
-                          'I accept the ',
-                          style: TextStyle(
-                            fontSize: 14,
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => _launchURL('https://picdb.arkynox.com/policy/mobile/privacy'),
-                          child: const Text(
-                            'Privacy Policy',
-                            style: TextStyle(
-                              color: Colors.blue,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    value: privacyAccepted,
-                    onChanged: (bool? value) {
-                      setState(() {
-                        privacyAccepted = value ?? false;
-                      });
-                    },
-                  ),
-                ],
-              ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Total number of pages (onboarding content + username page + policy page)
-    final totalPages = onboardingData.length + 2;
-
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      body: SafeArea(
+      child: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top bar with Skip button
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Row(
-                children: [
-                  const Spacer(),
-                  // Show Skip only when not on the policy (final) page
-                  if (_currentPage < onboardingData.length + 1)
-                    TextButton(
-                      onPressed: () {
-                        // Jump directly to policy page; policy cannot be skipped
-                        _pageController.animateToPage(
-                          onboardingData.length + 1,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeIn,
-                        );
-                      },
-                      child: const Text('Skip'),
-                    ),
-                ],
+            const Text(
+              'Our Policies',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (int page) {
-                  // Close keyboard if it's open when changing pages
-                  FocusScope.of(context).unfocus();
-
-                  setState(() {
-                    _currentPage = page;
-                  });
-                },
-                physics: const NeverScrollableScrollPhysics(), // Disable sliding between pages
-                children: [
-                  ...onboardingData.map(
-                    (content) => OnboardingContent(
-                      title: content['title']!,
-                      description: content['description']!,
-                      animation: content['animation']!,
-                    ),
-                  ),
-                  _buildUsernameInputPage(),
-                  _buildPolicyPage(),
-                ],
-              ),
+            const SizedBox(height: 20),
+            _buildPolicyItem(
+              context: context,
+              isDarkMode: isDarkMode,
+              title: 'Terms of Service',
+              value: termsAccepted,
+              onChanged: (val) => setState(() => termsAccepted = val!),
+              onTap: () => _launchURL('https://picdb.arkynox.com/policy/mobile/terms-of-service'),
             ),
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      totalPages,
-                      (index) => Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        height: 8,
-                        width: 8,
-                        decoration: BoxDecoration(
-                          color: _currentPage == index
-                              ? Theme.of(context).primaryColor
-                              : Colors.grey.shade300,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
+            const SizedBox(height: 15),
+            _buildPolicyItem(
+              context: context,
+              isDarkMode: isDarkMode,
+              title: 'Privacy Policy',
+              value: privacyAccepted,
+              onChanged: (val) => setState(() => privacyAccepted = val!),
+              onTap: () => _launchURL('https://picdb.arkynox.com/policy/mobile/privacy-policy'),
+            ),
+            const SizedBox(height: 30),
+            Center(
+              child: ElevatedButton(
+                onPressed: termsAccepted && privacyAccepted ? _handleContinue : null,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 40, vertical: 15),
+                  backgroundColor: isDarkMode ? const Color(0xFF4A90E2) : const Color(0xFF0D1F2D),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed:
-                        // On policy page, only enable if accepted both policies
-                        _currentPage == onboardingData.length + 1
-                          ? (termsAccepted && privacyAccepted)
-                              ? _handleContinue
-                              : null
-                        // On username page, only enable if username valid or already exists
-                        : _currentPage == onboardingData.length
-                          ? (_isUsernameValid || _hasUsername) && !_isSubmitting
-                              ? _handleContinue
-                              : null
-                        // On regular onboarding pages, always enable
-                        : _handleContinue,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: Text(
-                        _currentPage == onboardingData.length + 1 ? 'Get Started' : 'Next',
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
+                child: const Text('Accept and Continue',
+                    style: TextStyle(fontSize: 16, color: Colors.white)),
               ),
             ),
           ],
@@ -459,9 +362,168 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  Widget _buildPolicyItem({
+    required BuildContext context,
+    required bool isDarkMode,
+    required String title,
+    required bool value,
+    required ValueChanged<bool?> onChanged,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1A2B3D) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(12),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Checkbox(
+            value: value,
+            onChanged: onChanged,
+            activeColor: const Color(0xFF4A90E2),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: onTap,
+              child: Text.rich(
+                TextSpan(
+                  text: 'I agree to the ',
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: title,
+                      style: TextStyle(
+                        color: isDarkMode ? const Color(0xFF4A90E2) : const Color(0xFF0D1F2D),
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
+  Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+    final isDarkMode = themeNotifier.themeMode == ThemeMode.dark ||
+        (themeNotifier.themeMode == ThemeMode.system &&
+            MediaQuery.of(context).platformBrightness == Brightness.dark);
+
+    final totalPages = onboardingData.length + 2; // Regular pages + username + policy
+
+    return Scaffold(
+      backgroundColor: isDarkMode ? const Color(0xFF0D1A26) : const Color(0xFFFCF9F5),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: totalPages,
+                onPageChanged: (int page) {
+                  setState(() {
+                    _currentPage = page;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  if (index < onboardingData.length) {
+                    return OnboardingContent(
+                      title: onboardingData[index]['title']!,
+                      description: onboardingData[index]['description']!,
+                      animation: onboardingData[index]['animation']!,
+                    );
+                  } else if (index == onboardingData.length) {
+                    return _buildUsernameInputPage();
+                  } else {
+                    return _buildPolicyPage();
+                  }
+                },
+              ),
+            ),
+            _buildBottomControls(isDarkMode, totalPages),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomControls(bool isDarkMode, int totalPages) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // "Skip" button - show on onboarding and username pages
+          if (_currentPage <= onboardingData.length)
+            TextButton(
+              onPressed: () {
+                _pageController.animateToPage(
+                  totalPages - 1, // Skip to the last page (policy page)
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.ease,
+                );
+              },
+              child: Text(
+                'Skip',
+                style: TextStyle(
+                  color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                  fontSize: 16,
+                ),
+              ),
+            )
+          else
+            const SizedBox(width: 60), // Placeholder for alignment
+
+          // Page indicator dots
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              totalPages,
+              (index) => AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                height: 8,
+                width: _currentPage == index ? 24 : 8,
+                decoration: BoxDecoration(
+                  color: _currentPage == index
+                      ? (isDarkMode ? const Color(0xFF4A90E2) : const Color(0xFF0D1F2D))
+                      : (isDarkMode ? Colors.grey.shade700 : Colors.grey.shade400),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+
+          // "Continue" or "Next" button
+          if (_currentPage < onboardingData.length)
+            ElevatedButton(
+              onPressed: _handleContinue,
+              style: ElevatedButton.styleFrom(
+                shape: const CircleBorder(),
+                padding: const EdgeInsets.all(15),
+                backgroundColor: isDarkMode ? const Color(0xFF4A90E2) : const Color(0xFF0D1F2D),
+              ),
+              child: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20),
+            )
+          else
+            const SizedBox(width: 60), // Placeholder for alignment
+        ],
+      ),
+    );
   }
 }

@@ -37,7 +37,9 @@ class _UploadPopupState extends State<UploadPopup> {
   // Build custom tooltip with Skip button
   Widget _buildPopupShowcaseContent({required String title, required String description}) {
     final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
-    final isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
+    final isDarkMode = themeNotifier.themeMode == ThemeMode.dark ||
+        (themeNotifier.themeMode == ThemeMode.system &&
+            MediaQuery.of(context).platformBrightness == Brightness.dark);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -103,18 +105,38 @@ class _UploadPopupState extends State<UploadPopup> {
   @override
   Widget build(BuildContext context) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
+    final isDarkMode = themeNotifier.themeMode == ThemeMode.dark ||
+        (themeNotifier.themeMode == ThemeMode.system &&
+            MediaQuery.of(context).platformBrightness == Brightness.dark);
 
-    final backgroundColor = isDarkMode ? Colors.grey[850] : Colors.white;
-    final textColor = isDarkMode ? Colors.white : Colors.black;
-    final secondaryTextColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
-    final buttonPrimaryColor = isDarkMode ? Colors.blue[700] : Colors.blue;
-    final buttonSecondaryColor =
-        isDarkMode ? Colors.blue[900] : Colors.blue.shade200;
-    final containerBorderColor =
-        isDarkMode ? Colors.grey[700] : Colors.grey.shade400;
-    final iconContainerColor =
-        isDarkMode ? Colors.grey[700] : Colors.grey.shade300;
+    final backgroundColor = isDarkMode ? const Color(0xFF1A2B3D) : Colors.white;
+    final textColor = isDarkMode ? Colors.white : const Color(0xFF0D1F2D);
+    final secondaryTextColor = isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600;
+
+    // Define active and inactive button styles based on the dashboard theme
+    final activeButtonStyle = ElevatedButton.styleFrom(
+      backgroundColor: isDarkMode ? const Color(0xFF2196F3) : const Color(0xFF0D1F2D),
+      foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 15),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      elevation: 5,
+      shadowColor: isDarkMode ? Colors.blue.withOpacity(0.5) : Colors.black.withOpacity(0.2),
+    );
+
+    final inactiveButtonStyle = ElevatedButton.styleFrom(
+      backgroundColor: isDarkMode ? const Color(0xFF0D1A26) : Colors.grey.shade200,
+      foregroundColor: isDarkMode ? Colors.white70 : Colors.black54,
+      padding: const EdgeInsets.symmetric(vertical: 15),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      elevation: 0,
+    );
+
+    final containerBorderColor = isDarkMode ? Colors.grey[700] : Colors.grey.shade300;
+    final iconContainerColor = isDarkMode ? Colors.grey[800] : Colors.grey.shade200;
     final iconColor = isDarkMode ? Colors.white : Colors.black;
     final linkColor = isDarkMode ? Colors.lightBlueAccent : Colors.blue.shade800;
 
@@ -167,7 +189,7 @@ class _UploadPopupState extends State<UploadPopup> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.green.shade400,
+                            color: isDarkMode ? Colors.green.shade600 : Colors.green.shade400,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text(
@@ -213,7 +235,7 @@ class _UploadPopupState extends State<UploadPopup> {
                       child: Showcase.withWidget(
                         key: _downloadKey,
                         targetShapeBorder: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(8)),
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
                         ),
                         container: _buildPopupShowcaseContent(
                           title: 'Download Image',
@@ -225,10 +247,7 @@ class _UploadPopupState extends State<UploadPopup> {
                               _showDownloadContent = true;
                             });
                           },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: buttonPrimaryColor,
-                            padding: const EdgeInsets.symmetric(vertical: 15),
-                          ),
+                          style: _showDownloadContent ? activeButtonStyle : inactiveButtonStyle,
                           child: const Text('Download'),
                         ),
                       ),
@@ -238,7 +257,7 @@ class _UploadPopupState extends State<UploadPopup> {
                       child: Showcase.withWidget(
                         key: _viewKey,
                         targetShapeBorder: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(8)),
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
                         ),
                         container: _buildPopupShowcaseContent(
                           title: 'Preview & View Link',
@@ -250,10 +269,7 @@ class _UploadPopupState extends State<UploadPopup> {
                               _showDownloadContent = false;
                             });
                           },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: buttonSecondaryColor,
-                            padding: const EdgeInsets.symmetric(vertical: 15),
-                          ),
+                          style: !_showDownloadContent ? activeButtonStyle : inactiveButtonStyle,
                           child: const Text('View'),
                         ),
                       ),

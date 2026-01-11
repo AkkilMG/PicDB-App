@@ -71,6 +71,13 @@ android {
 //            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
         }
     }
+
+    // Your app does not support 16 KB memory page sizes. Learn More: https://developer.android.com/guide/practices/page-sizes#groovy
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging true
+        }
+    }
 }
 
 dependencies {
